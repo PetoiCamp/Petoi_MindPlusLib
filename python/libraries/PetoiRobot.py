@@ -11,6 +11,7 @@ import platform
 import os
 
 intoCameraMode = False
+intoGestureMode = False
 
 if platform.system() == "Windows":    # for Windows
     seperation = '\\'
@@ -464,6 +465,24 @@ def sendLongCmd(token, var, delayTime):
     send(goodPorts,[token, var, delayTime])
 
 
+# check if a string can be converted to a numeric value
+def isNumeric(s):
+    """
+    Check if a string can be converted to a numeric value (int or float)
+    """
+    s = s.strip()  # remove leading/trailing whitespace
+    if not s:  # empty string
+        return False
+    
+    # Handle negative numbers
+    if s.startswith('-'):
+        s = s[1:]
+    
+    # Check if it's a valid number (integer or float)
+    if s.replace('.', '').isdigit():
+        return True
+    return False
+
 # get value from a request
 def getValue(task, dataType ="int"):
     rawData = send(goodPorts, task)
@@ -476,9 +495,17 @@ def getValue(task, dataType ="int"):
             index = result.find("=") + 1
             try:
                 if dataType == "float":
-                    value = float(result[index:])
+                    if isNumeric(result[index:]):
+                        value = float(result[index:])
+                    else:
+                        # print(f'* Invalid float value: "{result[index:]}"')
+                        value = -1
                 elif dataType == "int":
-                    value = int(result[index:])
+                    if isNumeric(result[index:]):
+                        value = int(result[index:])
+                    else:
+                        # print(f'* Invalid int value: "{result[index:]}"')
+                        value = -1
                 elif dataType == "tuple":
                     tmpList = result[index:].split('\t')
                     sizeStr = tmpList[2].split(' ')
@@ -509,14 +536,14 @@ def getValue(task, dataType ="int"):
 # get analog value of a pin
 def readAnalogValue(pin):
     token = 'R'
-    task = [token, [97, pin], 0]
+    task = [token, [97, int(pin)], 0]
     return getValue(task)
     
 
 # get digital value of a pin
 def readDigitalValue(pin):
     token = 'R'
-    task = [token, [100, pin], 0]
+    task = [token, [100, int(pin)], 0]
 
     # p = getPortList()
     # rawData = sendTask(goodPorts, p[0], task)
@@ -528,6 +555,7 @@ def readUltrasonicDistance(triggerPin, echoPin):
     token = 'XU'
     task = [token, [int(triggerPin), int(echoPin)], 0]
     return getValue(task, dataType ="float")
+
 
 # get the coordinates of the identified target from camera module
 def readCameraCoordinate():
@@ -560,17 +588,54 @@ def readCameraCoordinate():
                 task = ['XCp', 0]
                 intoCameraMode = True
                 return getValue(task, dataType ="tuple")
-            
     else:
         # printH("intoCameraMode is:",intoCameraMode)
         task = ['XCp', 0]
         return getValue(task, dataType ="tuple")
 
 
+# get the gesture value from gesture sensor
+# The gesture value meaning: -1: No gesture detected; 0: Up; 1: Down; 2: Left; 3: Right.
+def readGestureVal():
+    global intoGestureMode
+    # Check if the camera task isactivated.
+    if intoGestureMode == False:
+        res = send(goodPorts, ['XGr', 0])
+        if res != -1 :
+            # printH("intoGestureMode is:",intoGestureMode)
+            logger.debug(f'res={res}')
+            # p = re.compile(r'^(.*),',re.MULTILINE)
+            p = re.compile(r'^(?=.*[01])(?=.*,).+$', flags=re.MULTILINE)
+            if res[1] != '':
+                logger.debug(f'res[1]={res[1]}')
+                for one in p.findall(res[1]):
+                    val = re.sub('\t','',one)
+                val = val.replace('\r','').replace('\n','')    # delete '\r\n'
+                strFlagList = val.split(',')[:-1]
+                flagList = list(map(lambda x:int(x),strFlagList))    # flag value have to be integer
+                logger.debug(f'flagList={flagList}')
+                if flagList[8] == 1:
+                    task = ['XGp', 0]
+                    intoGestureMode = True
+                    return getValue(task, dataType ="int")
+                else:
+                    val = -1
+                    print("No gesture detected!")
+                    return val
+            else:
+                task = ['XGp', 0]
+                intoGestureMode = True
+                return getValue(task, dataType ="int")
+    else:
+        # printH("intoGestureMode is:",intoGestureMode)
+        task = ['XGp', 0]
+        return getValue(task, dataType ="int")
+
+
 # set analog value of a pin
 def writeAnalogValue(pin, val):
     token = 'W'
-    task = [token, [97, pin, val], 0]
+    task = [token, [97, int(pin), val], 0]
 
     rawData = send(goodPorts, task)
 
@@ -578,7 +643,7 @@ def writeAnalogValue(pin, val):
 # set digital value of a pin
 def writeDigitalValue(pin, val):
     token = 'W'
-    task = [token, [100, pin, val], 0]
+    task = [token, [100, int(pin), val], 0]
 
     rawData = send(goodPorts, task)
 

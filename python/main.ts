@@ -335,13 +335,25 @@ namespace robot{
         var trigPin = parameter.TRPIN.code;
         var echoPin = parameter.ECPIN.code;
               
-        Generator.addCode(`readUltrasonicDistance(${trigPin}, ${echoPin})`);
+        if (trigPin == "16" || trigPin == "17")
+        {
+            Generator.addCode(`readUltrasonicDistance(${trigPin}, ${echoPin})  # pleae dial the switch on the extension hat to Uart2.`);
+        }
+        else
+        {
+            Generator.addCode(`readUltrasonicDistance(${trigPin}, ${echoPin})`);
+        }
     }
 
 
     //% block="Coordinates of the identified target (x,y,width,height)" blockType="reporter"
     export function readCameraCoordinate(parameter: any, block: any) {
         Generator.addCode(`readCameraCoordinate()`);
+    }
+
+    //% block="Get gesture value" blockType="reporter"
+    export function readGestureVal(parameter: any, block: any) {
+        Generator.addCode(`readGestureVal()    # 0: Up; 1: Down; 2:Left; 3:Right`);
     }
 
     

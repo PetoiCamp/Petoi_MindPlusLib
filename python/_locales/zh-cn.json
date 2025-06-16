@@ -24,6 +24,7 @@
     "robot.writeDigitalValue|block": "写数字值[DVAL]到引脚[DWPIN]",
     "robot.readUltrasonicDistance|block": "超声波传感器距离(cm): Trigger [TRPIN] Echo [ECPIN]",
     "robot.readCameraCoordinate|block": "摄像头识别目标的坐标值(x,y,width,height)",
+    "robot.readGestureVal|block": "读手势值",
     "robot.closeSerialPort|block": "关闭串口并退出",
 
     "robot.SKILL.sit|menu": "坐下",
