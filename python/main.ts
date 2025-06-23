@@ -277,7 +277,8 @@ namespace robot{
 
 		if (pin == "16" || pin == "17")
         {
-            Generator.addCode(`writeAnalogValue(${pin}, ${val})  # pleae dial the switch on the extension hat to Uart2.`);
+            Generator.addCode(`# Pleae dial the switch on the extension hat to Uart2.`)
+            Generator.addCode(`writeAnalogValue(${pin}, ${val})`);
         }
         else
         {
@@ -304,7 +305,8 @@ namespace robot{
 
 		if (pin == "16." || pin == "17.")
         {
-            Generator.addCode(`writeDigitalValue(${pin}, ${val})  # pleae dial the switch on the extension hat to Uart2.`);
+            Generator.addCode(`# Pleae dial the switch on the extension hat to Uart2.`)
+            Generator.addCode(`writeDigitalValue(${pin}, ${val})`);
         }
         else
         {
@@ -319,7 +321,8 @@ namespace robot{
         var pin=parameter.DRPIN.code;
         if (pin == "16." || pin == "17.")
         {
-            Generator.addCode(`readDigitalValue(${pin})  # pleae dial the switch on the extension hat to Uart2.`);
+            Generator.addCode(`# Pleae dial the switch on the extension hat to Uart2.`)
+            Generator.addCode(`readDigitalValue(${pin})`);
         }
         else
         {
@@ -337,7 +340,8 @@ namespace robot{
               
         if (trigPin == "16" || trigPin == "17")
         {
-            Generator.addCode(`readUltrasonicDistance(${trigPin}, ${echoPin})  # pleae dial the switch on the extension hat to Uart2.`);
+            Generator.addCode(`# Pleae dial the switch on the extension hat to Uart2.`)
+            Generator.addCode(`readUltrasonicDistance(${trigPin}, ${echoPin})`);
         }
         else
         {
@@ -353,7 +357,8 @@ namespace robot{
 
     //% block="Get gesture value" blockType="reporter"
     export function readGestureVal(parameter: any, block: any) {
-        Generator.addCode(`readGestureVal()    # 0: Up; 1: Down; 2:Left; 3:Right`);
+        Generator.addCode(`# 0: Up; 1: Down; 2:Left; 3:Right`)
+        Generator.addCode(`readGestureVal()`);
     }
 
     

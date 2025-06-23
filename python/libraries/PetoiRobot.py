@@ -486,6 +486,7 @@ def isNumeric(s):
 # get value from a request
 def getValue(task, dataType ="int"):
     rawData = send(goodPorts, task)
+    value = -1
     if rawData!=-1:
         logger.debug(f'rawData={rawData}')
         # result = rawData[1][:-2]
@@ -499,13 +500,13 @@ def getValue(task, dataType ="int"):
                         value = float(result[index:])
                     else:
                         # print(f'* Invalid float value: "{result[index:]}"')
-                        value = -1
+                        value = float(-1)
                 elif dataType == "int":
                     if isNumeric(result[index:]):
                         value = int(result[index:])
                     else:
                         # print(f'* Invalid int value: "{result[index:]}"')
-                        value = -1
+                        value = int(-1)
                 elif dataType == "tuple":
                     tmpList = result[index:].split('\t')
                     sizeStr = tmpList[2].split(' ')
@@ -524,11 +525,13 @@ def getValue(task, dataType ="int"):
                 print('* Got value error!')
                 raise e
         else:
-            value = (-255, -255, 0, 0)
+            if dataType == "tuple":
+                value = (-255, -255, 0, 0)
             print('* No value got!')
         return value
     else:
-        value = (-255, -255, 0, 0)
+        if dataType == "tuple":
+            value = (-255, -255, 0, 0)
         print('* No value got!')
         return value
 
