@@ -1,11 +1,13 @@
 {
     "name": {
       "zh-cn": "编程积木",
-      "en": "Coding Blocks"
+      "en": "Coding Blocks",
+      "fr": "Blocs de code",
     },
     "description": {
       "zh-cn": "使用积木块控制Petoi机器人。",
-      "en": "Control the Petoi robot with block-based drag-and-drop programming."
+      "en": "Control the Petoi robot with block-based drag-and-drop programming.",
+      "fr": "Contrôler le robot Petoi avec une programmation par blocs en glisser-déposer.",
     },
     "author": "Petoi",
     "email": "jason.wang@petoi.com",
