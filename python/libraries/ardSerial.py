@@ -170,12 +170,13 @@ def serialWriteByte(port, var=None):
 
 
 def printSerialMessage(port, token, timeout=0):
-    if token == 'k' or token == 'K':
+    if 'X' in token:
+        token = 'X'
+
+    if token == 'k' or token == 'K' or token == 'X':
         threshold = 8
     else:
         threshold = 3
-    if 'X' in token:
-        token = 'X'
     startTime = time.time()
     allPrints = ''
     while True:
@@ -195,7 +196,9 @@ def printSerialMessage(port, token, timeout=0):
                     # print(response, flush=True)
                     allPrints += response
         now = time.time()
-        if (now - startTime) > threshold:
+        timePassed = now - startTime
+        logger.debug(f"time passed is: {timePassed}")
+        if timePassed > threshold:
             # print('Elapsed time: ', end='')
             # print(threshold, end=' seconds\n', flush=True)
             logger.debug(f"Elapsed time: {threshold} seconds")
@@ -230,7 +233,7 @@ def sendTask(PortList, port, task, timeout=0):  # task Structure is [token, var=
                 #        print('c') #which case
                 serialWriteByte(port, task[1])
             token = task[0][0]
-#            printH("token",token)
+            # printH("token is:",token)
             if token == 'I' or token =='L':
                 timeout = 1 # in case the UI gets stuck
             lastMessage = printSerialMessage(port, token, timeout)

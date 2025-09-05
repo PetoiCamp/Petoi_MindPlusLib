@@ -559,6 +559,12 @@ def readUltrasonicDistance(triggerPin, echoPin):
     task = [token, [int(triggerPin), int(echoPin)], 0]
     return getValue(task, dataType ="float")
 
+# modeDict = {'Serial': 0, 'Camera': 1, 'Voice': 2, 'DoubleTouch': 3, 
+#             'DoubleLight': 4, 'DoubleIRdistance': 5, 'PIR': 6, 
+#             'BackTouch': 7, 'Ultrasonic': 8, 'Gesture': 9, 'QuickDemo': 10}
+modeDict = {'Serial': 0, 'Voice': 1, 'DoubleTouch': 2, 
+            'DoubleLight': 3, 'DoubleIRdistance': 4, 'PIR': 5, 
+            'BackTouch': 6, 'Ultrasonic': 7, 'Gesture': 8, 'Camera': 9, 'QuickDemo': 10}
 
 # get the coordinates of the identified target from camera module
 def readCameraCoordinate():
@@ -573,20 +579,25 @@ def readCameraCoordinate():
             p = re.compile(r'^(?=.*[01])(?=.*,).+$', flags=re.MULTILINE)
             if res[1] != '':
                 logger.debug(f'res[1]={res[1]}')
-                for one in p.findall(res[1]):
-                    val = re.sub('\t','',one)
-                val = val.replace('\r','').replace('\n','')    # delete '\r\n'
-                strFlagList = val.split(',')[:-1]
-                flagList = list(map(lambda x:int(x),strFlagList))    # flag value have to be integer
-                logger.debug(f'flagList={flagList}')
-                if flagList[9] == 1:
+                if "sit" in res[1]:    # via Bluetooth serial port
                     task = ['XCp', 0]
                     intoCameraMode = True
                     return getValue(task, dataType ="tuple")
-                else:
-                    tup = (0,0)
-                    print("No target detected!")
-                    return tup
+                else:    # via USB serial port
+                    for one in p.findall(res[1]):
+                        val = re.sub('\t','',one)
+                    val = val.replace('\r','').replace('\n','')    # delete '\r\n'
+                    strFlagList = val.split(',')[:-1]
+                    flagList = list(map(lambda x:int(x),strFlagList))    # flag value have to be integer
+                    logger.debug(f'flagList={flagList}')
+                    if flagList[modeDict['Camera']] == 1:
+                        task = ['XCp', 0]
+                        intoCameraMode = True
+                        return getValue(task, dataType ="tuple")
+                    else:
+                        tup = (0,0)
+                        print("No target detected!")
+                        return tup
             else:
                 task = ['XCp', 0]
                 intoCameraMode = True
@@ -617,7 +628,7 @@ def readGestureVal():
                 strFlagList = val.split(',')[:-1]
                 flagList = list(map(lambda x:int(x),strFlagList))    # flag value have to be integer
                 logger.debug(f'flagList={flagList}')
-                if flagList[8] == 1:
+                if flagList[modeDict['Gesture']] == 1:
                     task = ['XGp', 0]
                     intoGestureMode = True
                     return getValue(task, dataType ="int")
