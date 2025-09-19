@@ -566,7 +566,10 @@ def testPort(PortList, serialObject, p):
             result = result.read_all().decode('ISO-8859-1')
             if result != '':
                 print('Waiting for the robot to boot up')
-                time.sleep(2)
+                t = 16
+                logger.debug(f"time delay: {t}s.")
+                time.sleep(t)
+                
                 waitTime = 3
             else:
                 waitTime = 2
@@ -607,7 +610,7 @@ def checkPortList(PortList, allPorts, needTesting=True):
         for t in threads:
             if t.is_alive():
                 # print("t is alive")
-                t.join(timeout=8)
+                t.join(timeout=36)    # Extend the timeout threshold to 36
 
 
 def keepCheckingPort(portList, cond1=None, check=True, updateFunc = lambda:None):
