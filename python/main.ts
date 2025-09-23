@@ -357,8 +357,8 @@ namespace robot{
 
     //% block="Get gesture value" blockType="reporter"
     export function readGestureVal(parameter: any, block: any) {
-        Generator.addCode(`# 0: Up; 1: Down; 2:Left; 3:Right`)
-        Generator.addCode(`readGestureVal()`);
+        /* Generator.addCode(`# 0: Up; 1: Down; 2:Left; 3:Right`) */
+        Generator.addCode(`readGestureVal()  # 0: Up; 1: Down; 2:Left; 3:Right`);
     }
 
     
