@@ -15,7 +15,7 @@
     "isBoard": false,
     "id": "robot",
     "platform": ["win","mac","web","linux"],
-    "version": "0.1.9",
+    "version": "0.1.10",
     "asset": {
       "python": {
           "dir": "python/",

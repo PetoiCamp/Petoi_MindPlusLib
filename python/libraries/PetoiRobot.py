@@ -12,6 +12,7 @@ import os
 
 intoCameraMode = False
 intoGestureMode = False
+backTouchMode = False
 
 if platform.system() == "Windows":    # for Windows
     seperation = '\\'
@@ -645,6 +646,69 @@ def readGestureVal():
         task = ['XGp', 0]
         return getValue(task, dataType ="int")
 
+
+# get the back touch sensor value from back touch sensor
+# The back touch value meaning: 0: No touch detected; 1: Front Left; 2: Front Right; 3: Center; 4: Back.
+def readBackTouchSensorVal():
+    touchPadMap = [1, 3, 4, 2]
+    touchLocation = ["Front Left", "Front Right", "Center", "Back"]
+    backTouchID = -1
+
+    global backTouchMode
+    # Check if the back touch mode is deactivated.
+    if backTouchMode == False:
+        res = send(goodPorts, ['X?', 0])
+        if res != -1 :
+            # printH("backTouchMode is:", backTouchMode)
+            logger.debug(f'res={res}')
+            # p = re.compile(r'^(.*),',re.MULTILINE)
+            p = re.compile(r'^(?=.*[01])(?=.*,).+$', flags=re.MULTILINE)
+            if res[1] != '':
+                logger.debug(f'res[1]={res[1]}')
+                for one in p.findall(res[1]):
+                    val = re.sub('\t','',one)
+                val = val.replace('\r','').replace('\n','')    # delete '\r\n'
+                strFlagList = val.split(',')[:-1]
+                flagList = list(map(lambda x:int(x),strFlagList))    # flag value have to be integer
+                logger.debug(f'flagList={flagList}')
+                if flagList[modeDict['BackTouch']] == 1:
+                    res = send(goodPorts, ['Xb', 0])
+                    if res != -1 :
+                        # printH("backTouchMode is:", backTouchMode)
+                        logger.debug(f'res={res}')
+                        # p = re.compile(r'^(.*),',re.MULTILINE)
+                        p = re.compile(r'^(?=.*[01])(?=.*,).+$', flags=re.MULTILINE)
+                        if res[1] != '':
+                            logger.debug(f'res[1]={res[1]}')
+                            for one in p.findall(res[1]):
+                                val = re.sub('\t','',one)
+                            val = val.replace('\r','').replace('\n','')    # delete '\r\n'
+                            strFlagList = val.split(',')[:-1]
+                            flagList = list(map(lambda x:int(x),strFlagList))    # flag value have to be integer
+                            logger.debug(f'flagList={flagList}')
+                            if flagList[modeDict['BackTouch']] == 1:
+                                backTouchMode = True
+
+    # printH("backTouchMode:", backTouchMode)
+    if backTouchMode is False:
+        token = 'R'
+        task = [token, [97, 38], 0]
+        touchReading = getValue(task)
+        # printH("touchReading:", touchReading)
+        if touchReading > 0 and touchReading < 600:
+            print("Please check the connection between the back touch sensor and the mainboard!")
+        elif touchReading < 2400:
+            # printH("index:", int(touchReading / 600))
+            backTouchID = touchPadMap[int(touchReading / 600)]
+            printH("Touched:", touchLocation[backTouchID - 1])
+        else:
+            backTouchID = 0
+            # print("No touch detected!")
+    else:
+        print("Back touch mode is not deactivated!")
+    
+    return backTouchID
+    
 
 # set analog value of a pin
 def writeAnalogValue(pin, val):

@@ -358,9 +358,13 @@ namespace robot{
     //% block="Get gesture value" blockType="reporter"
     export function readGestureVal(parameter: any, block: any) {
         /* Generator.addCode(`# 0: Up; 1: Down; 2:Left; 3:Right`) */
-        Generator.addCode(`readGestureVal()  # 0: Up; 1: Down; 2:Left; 3:Right`);
+        Generator.addCode(`readGestureVal()  # -1: No gesture detected; 0: Up; 1: Down; 2:Left; 3:Right`);
     }
 
+    //% block="Read back touch sensor value" blockType="reporter"
+	export function readBackTouchSensorVal(parameter: any, block: any) {
+        Generator.addCode(`readBackTouchSensorVal()  # 0: No touch detected; 1: Front Left; 2: Front Right; 3: Center; 4: Back`);
+	}
     
     //% block="Close serial port and quit" blockType="command"
     export function closeSerialPort(parameter: any, block: any) {
@@ -368,7 +372,6 @@ namespace robot{
         Generator.addCode(`closePort()`);
         
     }
-
 
 /*
     function replaceQuotationMarks(str:string){

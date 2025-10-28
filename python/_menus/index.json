@@ -7,7 +7,8 @@
         ["BiBoard 35", "35"],
         ["BiBoard 36", "36"],
         ["BiBoard 39", "39"],
-        ["BiBoard V1 Battery", "37"]],
+        ["BiBoard V1 Battery", "37"],
+        ["BiBoard V1 Back touch", "38"]],
         "default_readAnalogValue_ARPIN":"16"
     },
 
@@ -137,6 +138,8 @@
         ["scratch", "kscrh"],
         ["sniff", "ksnf"],
         ["stepping", "kvtF"],
+        ["turnLeft", "kvtL"],
+        ["turnRight", "kvtR"],
         ["crawl", "kcrF"],
         ["crawlLeft", "kcrL"],
         ["crawlRight", "kcrR"],

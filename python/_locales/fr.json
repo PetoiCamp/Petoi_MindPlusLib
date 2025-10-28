@@ -24,6 +24,8 @@
     "robot.writeDigitalValue|block": "Écrire la valeur numérique [DVAL] sur le connecteur [DWPIN]",
     "robot.readUltrasonicDistance|block": "Distance du capteur à ultrasons (en cm) : déclencheur [TRPIN], écho [ECPIN]",
     "robot.readCameraCoordinate|block": "Coordonnées de la cible detéctée par la caméra (x,y,largeur,hauteur)",
+    "robot.readGestureVal|block": "Lire la valeur du capteur de gestes",
+    "robot.readBackTouchSensorVal|block": "Lire la valeur du capteur de toucher arrière",
     "robot.closeSerialPort|block": "Fermer le port série",
 
     "robot.SKILL.sit|menu": "S'assoir",
@@ -49,6 +51,8 @@
     "robot.SKILL.scratch|menu": "Gratter",
     "robot.SKILL.sniff|menu": "Renifler",
     "robot.SKILL.stepping|menu": "Trottiner sur place",
+    "robot.SKILL.turnLeft|menu": "Tourner à gauche",
+    "robot.SKILL.turnRight|menu": "Tourner à droite",
     "robot.SKILL.crawl|menu": "Ramper",
     "robot.SKILL.crawlLeft|menu": "Ramper à gauche",
     "robot.SKILL.crawlRight|menu": "Ramper à droite",
@@ -94,6 +98,9 @@
     "robot.INDEX.LB knee|menu": "Genou Arrière Gauche",
 
     "robot.ARPIN.NyBoard Battery|menu": "NyBoard Batterie",
+    "robot.ARPIN.BiBoard V1 Battery|menu": "BiBoard V1 Batterie",
+    "robot.ARPIN.BiBoard V1 Back touch|menu": "BiBoard V1 Toucher arrière",
+
     "robot.AWPIN.NyBoard Buzzer|menu": "NyBoard Buzzer",
     "robot.AWPIN.BiBoard Buzzer|menu": "BiBoard Buzzer",
     "robot.DWPIN.NyBoard Buzzer|menu": "NyBoard Buzzer",

@@ -25,6 +25,7 @@
     "robot.readUltrasonicDistance|block": "超声波传感器距离(cm): Trigger [TRPIN] Echo [ECPIN]",
     "robot.readCameraCoordinate|block": "摄像头识别目标的坐标值(x,y,width,height)",
     "robot.readGestureVal|block": "读手势值",
+    "robot.readBackTouchSensorVal|block": "读背部触摸传感器值",
     "robot.closeSerialPort|block": "关闭串口并退出",
 
     "robot.SKILL.sit|menu": "坐下",
@@ -50,6 +51,8 @@
     "robot.SKILL.scratch|menu": "挠痒",
     "robot.SKILL.sniff|menu": "闻一闻",
     "robot.SKILL.stepping|menu": "原地踏步",
+    "robot.SKILL.turnLeft|menu": "原地左转",
+    "robot.SKILL.turnRight|menu": "原地右转",
     "robot.SKILL.crawl|menu": "向前爬",
     "robot.SKILL.crawlLeft|menu": "向左爬",
     "robot.SKILL.crawlRight|menu": "向右爬",
@@ -95,8 +98,12 @@
     "robot.INDEX.LB knee|menu": "左后膝",
 
     "robot.ARPIN.NyBoard Battery|menu": "NyBoard 电池",
+    "robot.ARPIN.BiBoard V1 Battery|menu": "BiBoard V1 电池",
+    "robot.ARPIN.BiBoard V1 Back touch|menu": "BiBoard V1 背部触摸",
+
     "robot.AWPIN.NyBoard Buzzer|menu": "NyBoard 蜂鸣器",
     "robot.AWPIN.BiBoard Buzzer|menu": "BiBoard 蜂鸣器",
+    
     "robot.DWPIN.NyBoard Buzzer|menu": "NyBoard 蜂鸣器",
     "robot.DWPIN.BiBoard Buzzer|menu": "BiBoard 蜂鸣器",
 
