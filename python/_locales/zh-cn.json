@@ -102,10 +102,12 @@
     "robot.ARPIN.BiBoard V1 Back touch|menu": "BiBoard V1 背部触摸",
 
     "robot.AWPIN.NyBoard Buzzer|menu": "NyBoard 蜂鸣器",
-    "robot.AWPIN.BiBoard Buzzer|menu": "BiBoard 蜂鸣器",
+    "robot.AWPIN.BiBoard V0 Buzzer|menu": "BiBoard V0 蜂鸣器",
+    "robot.AWPIN.BiBoard V1 Buzzer|menu": "BiBoard V1 蜂鸣器",
     
     "robot.DWPIN.NyBoard Buzzer|menu": "NyBoard 蜂鸣器",
-    "robot.DWPIN.BiBoard Buzzer|menu": "BiBoard 蜂鸣器",
+    "robot.DWPIN.BiBoard V0 Buzzer|menu": "BiBoard V0 蜂鸣器",
+    "robot.DWPIN.BiBoard V1 Buzzer|menu": "BiBoard V1 蜂鸣器",
 
     "robot.DVAL.LOW|menu": "低",
     "robot.DVAL.HIGH|menu": "高",

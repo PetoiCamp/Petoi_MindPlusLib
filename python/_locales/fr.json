@@ -102,9 +102,12 @@
     "robot.ARPIN.BiBoard V1 Back touch|menu": "BiBoard V1 Toucher arrière",
 
     "robot.AWPIN.NyBoard Buzzer|menu": "NyBoard Buzzer",
-    "robot.AWPIN.BiBoard Buzzer|menu": "BiBoard Buzzer",
+    "robot.AWPIN.BiBoard V0 Buzzer|menu": "BiBoard V0 Buzzer",
+    "robot.AWPIN.BiBoard V1 Buzzer|menu": "BiBoard V1 Buzzer",
+   
     "robot.DWPIN.NyBoard Buzzer|menu": "NyBoard Buzzer",
-    "robot.DWPIN.BiBoard Buzzer|menu": "BiBoard Buzzer",
+    "robot.DWPIN.BiBoard V0 Buzzer|menu": "BiBoard V0 Buzzer",
+    "robot.DWPIN.BiBoard V1 Buzzer|menu": "BiBoard V1 Buzzer",
 
     "robot.DVAL.LOW|menu": "BAS",
     "robot.DVAL.HIGH|menu": "HAUT",
