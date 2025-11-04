@@ -135,14 +135,37 @@ def serialWriteNumToByte(port, token, var=None):  # Only to be used for c m u b 
                 message +=  (str(round(element))+" ")
             in_str = token.encode()+encode(message) +'\n'.encode()
 
-    slice = 0
-    while len(in_str) > slice:
-        if len(in_str) - slice >= 20:
-            port.Send_data(in_str[slice:slice+20])
-        else:
-            port.Send_data(in_str[slice:])
-        slice+=20
-        time.sleep(delayBetweenSlice)
+    # 添加超时机制，防止在错误的串口上阻塞
+    try:
+        # 设置写超时为 2 秒
+        if port.main_engine:
+            original_write_timeout = port.main_engine.write_timeout
+            port.main_engine.write_timeout = 2  # 2秒写超时
+        
+        slice = 0
+        while len(in_str) > slice:
+            if len(in_str) - slice >= 20:
+                port.Send_data(in_str[slice:slice+20])
+            else:
+                port.Send_data(in_str[slice:])
+            slice+=20
+            time.sleep(delayBetweenSlice)
+        
+        # 恢复原始写超时设置
+        if port.main_engine:
+            port.main_engine.write_timeout = original_write_timeout
+            
+    except serial.SerialTimeoutException:
+        logger.error("Serial write timeout! Port may be invalid or disconnected.")
+        if port.main_engine:
+            port.main_engine.write_timeout = original_write_timeout
+        raise Exception("Serial write timeout")
+    except Exception as e:
+        logger.error(f"Error writing to serial port: {e}")
+        if port.main_engine:
+            port.main_engine.write_timeout = original_write_timeout
+        raise
+    
     logger.debug(f"!!!! {in_str}")
             #print(encode(in_str))
 #            port.Send_data(encode(message))
@@ -171,7 +194,24 @@ def serialWriteByte(port, var=None):
         in_str = token + '\n'
     logger.debug(f"!!!!!!! {in_str}")
     # printH("in_str:", in_str)
-    port.Send_data(encode(in_str))
+    
+    # 添加超时机制，防止在错误的串口上阻塞
+    try:
+        # 设置写超时为 2 秒
+        if port.main_engine:
+            original_write_timeout = port.main_engine.write_timeout
+            port.main_engine.write_timeout = 2  # 2秒写超时
+            port.Send_data(encode(in_str))
+            port.main_engine.write_timeout = original_write_timeout
+        else:
+            port.Send_data(encode(in_str))
+    except serial.SerialTimeoutException:
+        logger.error("Serial write timeout! Port may be invalid or disconnected.")
+        raise Exception("Serial write timeout")
+    except Exception as e:
+        logger.error(f"Error writing to serial port: {e}")
+        raise
+    
     time.sleep(0.01)
 
 
@@ -187,7 +227,6 @@ def printSerialMessage(port, token, timeout=0):
     allPrints = ''
     while True:
         time.sleep(0.001)
-        #            return 'err'
         if port:
             response = port.main_engine.readline().decode('ISO-8859-1')
             if response != '':
@@ -233,10 +272,10 @@ def sendTask(PortList, port, task, timeout=0):  # task Structure is [token, var=
                 # printH("port is:", port)
                 serialWriteByte(port, [task[0]])
             elif isinstance(task[1][0], int):
-                #        print('b')
+                # print('b')
                 serialWriteNumToByte(port, task[0], task[1])
             else:
-                #        print('c') #which case
+                # print('c') #which case
                 serialWriteByte(port, task[1])
             token = task[0][0]
             # printH("token is:",token)

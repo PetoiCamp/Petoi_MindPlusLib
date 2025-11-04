@@ -321,8 +321,9 @@ namespace robot{
         var pin=parameter.DRPIN.code;
         if (pin == "16." || pin == "17.")
         {
-            Generator.addCode(`# Pleae dial the switch on the extension hat to Uart2.`)
-            Generator.addCode(`readDigitalValue(${pin})`);
+            /* Generator.addCode(`# Pleae dial the switch on the extension hat to Uart2.`) */
+            Generator.addCode(`readDigitalValue(${pin}  # Pleae dial the switch on the extension hat to Uart2.
+                )`);
         }
         else
         {
@@ -340,8 +341,9 @@ namespace robot{
               
         if (trigPin == "16" || trigPin == "17")
         {
-            Generator.addCode(`# Pleae dial the switch on the extension hat to Uart2.`)
-            Generator.addCode(`readUltrasonicDistance(${trigPin}, ${echoPin})`);
+            /* Generator.addCode(`# Pleae dial the switch on the extension hat to Uart2.`) */
+            Generator.addCode(`readUltrasonicDistance(${trigPin}, ${echoPin}  # Pleae dial the switch on the extension hat to Uart2.
+                )`);
         }
         else
         {
@@ -357,13 +359,15 @@ namespace robot{
 
     //% block="Get gesture value" blockType="reporter"
     export function readGestureVal(parameter: any, block: any) {
-        /* Generator.addCode(`# 0: Up; 1: Down; 2:Left; 3:Right`) */
-        Generator.addCode(`readGestureVal()  # -1: No gesture detected; 0: Up; 1: Down; 2:Left; 3:Right`);
+        /* Generator.addCode(`# 0: Up; 1: Down; 2: Left; 3: Right`) */
+        Generator.addCode(`readGestureVal( # -1: No gesture detected; 0: Up; 1: Down; 2: Left; 3: Right.
+        )`);
     }
 
     //% block="Read back touch sensor value" blockType="reporter"
 	export function readBackTouchSensorVal(parameter: any, block: any) {
-        Generator.addCode(`readBackTouchSensorVal()  # 0: No touch detected; 1: Front Left; 2: Front Right; 3: Center; 4: Back`);
+        Generator.addCode(`readBackTouchSensorVal( # 0: No touch detected; 1: Front Left; 2: Front Right; 3: Center; 4: Back.
+        )`);
 	}
     
     //% block="Close serial port and quit" blockType="command"

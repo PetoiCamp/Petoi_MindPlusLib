@@ -333,11 +333,207 @@ def openPort(port):
     deacGyro()
 
 
-# auto connect serial ports
+# get the path of configuration file
+def getConfigFilePath():
+    """获取配置文件的完整路径"""
+    return configDir + seperation + 'defaultConfig.txt'
+
+
+# read all ports from configuration file line 9
+def readAllPortsFromConfig():
+    """
+    从配置文件第9行读取上次运行时的系统串口列表
+    格式: All ports: COM3, COM5
+    返回: 串口名称列表（不含 /dev/ 前缀）
+    """
+    configPath = getConfigFilePath()
+    if not os.path.exists(configPath):
+        return []
+    
+    try:
+        with open(configPath, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            if len(lines) >= 9:
+                line9 = lines[8].strip()
+                if line9.startswith('All ports: '):
+                    # 去掉前缀 "All ports: "
+                    portsStr = line9[len('All ports: '):]
+                    if portsStr:
+                        ports = [p.strip() for p in portsStr.split(',') if p.strip()]
+                        return ports
+    except Exception as e:
+        print(f'* Error reading config file: {e}')
+    
+    return []
+
+
+# read valid ports from configuration file line 10
+def readValidPortsFromConfig():
+    """
+    从配置文件第10行读取上次运行时可以打开的串口列表
+    格式: Valid ports: COM3, COM5
+    返回: 串口名称列表（不含 /dev/ 前缀）
+    """
+    configPath = getConfigFilePath()
+    if not os.path.exists(configPath):
+        return []
+    
+    try:
+        with open(configPath, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            if len(lines) >= 10:
+                line10 = lines[9].strip()
+                if line10.startswith('Valid ports: '):
+                    # 去掉前缀 "Valid ports: "
+                    portsStr = line10[len('Valid ports: '):]
+                    if portsStr:
+                        ports = [p.strip() for p in portsStr.split(',') if p.strip()]
+                        return ports
+    except Exception as e:
+        print(f'* Error reading config file: {e}')
+    
+    return []
+
+
+# save all ports and valid ports to configuration file
+def savePortsToConfig(allPortsList, validPortsList):
+    """
+    将串口列表保存到配置文件第9行和第10行
+    参数: 
+        allPortsList - 系统所有串口列表（不含 /dev/ 前缀）
+        validPortsList - 可以打开的串口列表（不含 /dev/ 前缀）
+    """
+    configPath = getConfigFilePath()
+    
+    # 确保配置目录存在
+    makeDirectory(configDir)
+    
+    # 读取现有内容
+    lines = []
+    if os.path.exists(configPath):
+        try:
+            with open(configPath, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except Exception as e:
+            print(f'* Error reading config file: {e}')
+    
+    # 确保至少有10行
+    while len(lines) < 10:
+        lines.append('\n')
+    
+    # 更新第9行（索引为8）- 保存系统所有串口
+    allPortsStr = 'All ports: ' + ', '.join(allPortsList)
+    lines[8] = allPortsStr + '\n'
+    
+    # 更新第10行（索引为9）- 保存可以打开的串口
+    validPortsStr = 'Valid ports: ' + ', '.join(validPortsList)
+    lines[9] = validPortsStr + '\n'
+    
+    # 写回文件
+    try:
+        with open(configPath, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+        logger.debug(f'Saved to config - All ports: {allPortsStr}')
+        logger.debug(f'Saved to config - Valid ports: {validPortsStr}')
+    except Exception as e:
+        print(f'* Error writing config file: {e}')
+
+
+# auto connect serial ports with smart configuration
 def autoConnect():
-    connectPort(goodPorts)
+    """
+    智能自动连接串口，支持配置文件持久化
+    按照优化的逻辑：只检查有效串口和新增串口，避免重复检查已知无效的串口
+    """
+    import sys
+    from ardSerial import Communication, testPort, showSerialPorts
+    
+    # 创建空列表
+    CheckList = []
+    newValidPorts = []
+    
+    # 获取当前系统中检测到的串口组成的列表
+    allPorts = Communication.Print_Used_Com()
+    showSerialPorts(allPorts)
+    
+    # 检查系统是否有串口设备
+    if len(allPorts) == 0:
+        print('No port found! Please make sure the serial port can be recognized by the computer first.')
+        sys.exit(1)
+    
+    # 提取串口名称列表（不含 /dev/ 前缀）
+    allPortNames = [port.split('/')[-1] for port in allPorts]
+    
+    # 读取配置文件
+    # 第9行：上次运行时的系统串口列表
+    previousPorts = readAllPortsFromConfig()
+    logger.debug(f'Previous ports from config: {previousPorts}')
+    
+    # 第10行：上次运行时可以打开的串口列表
+    validPorts = readValidPortsFromConfig()
+    logger.debug(f'Valid ports from config: {validPorts}')
+    
+    # 计算差异：在 allPortNames 中但不在 previousPorts 中的元素（新增的串口）
+    diffPorts = [port for port in allPortNames if port not in previousPorts]
+    logger.debug(f'Diff ports (new ports): {diffPorts}')
+    
+    # 删除 validPorts 中不在当前系统串口列表 allPortNames 中的元素
+    validPorts = [port for port in validPorts if port in allPortNames]
+    logger.debug(f'Valid ports after filtering: {validPorts}')
+    
+    # 确定检查列表 CheckList
+    if len(validPorts) == 0:
+        # 如果没有有效串口，检查所有系统串口
+        CheckList = allPortNames
+        print('No valid ports found in config. Trying all available ports...')
+    else:
+        # 有有效串口，只检查有效串口和新增串口
+        CheckList = validPorts + diffPorts
+        print(f'Trying to connect to valid ports and new ports...')
+    
+    logger.debug(f'CheckList: {CheckList}')
+    
+    # 对 CheckList 中每一个串口设备逐个尝试打开
+    for portName in CheckList:
+        # 构造完整的串口路径
+        if platform.system() == "Windows":
+            fullPort = portName
+        else:
+            fullPort = '/dev/' + portName
+        
+        try:
+            print(f'Trying port: {portName}...')
+            serialObject = Communication(fullPort, 115200, 1)
+            # 测试串口是否为 Petoi 设备
+            testPort(goodPorts, serialObject, portName)
+            
+            if serialObject in goodPorts:
+                # 成功打开并验证为 Petoi 设备
+                newValidPorts.append(portName)
+                print(f'Successfully connected to port: {portName}')
+            else:
+                # 不是 Petoi 设备，关闭串口
+                serialObject.Close_Engine()
+                print(f'* Port {portName} is not connected to a Petoi device!')
+        except Exception as e:
+            print(f'* Port {portName} may be occupied by another program!')
+            logger.debug(f'Error opening port {portName}: {e}')
+    
+    # 检查是否有成功打开的串口
+    if len(newValidPorts) == 0:
+        print('No port found! Please make sure the serial port can be recognized by the computer first.')
+        sys.exit(1)
+    
+    # 更新配置文件
+    # 第9行：保存此次运行程序时的系统串口列表
+    # 第10行：保存此次运行程序得到的可以打开的串口列表
+    savePortsToConfig(allPortNames, newValidPorts)
+    
+    # 打印可用技能名称
     logger.debug(f'goodPorts: {goodPorts}')
     printSkillFileName()
+    
+    # 关闭陀螺仪
     deacGyro()
     
 
