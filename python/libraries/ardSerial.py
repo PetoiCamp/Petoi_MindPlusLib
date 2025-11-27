@@ -52,7 +52,7 @@ if not config.useMindPlus:
     # printH("txt('lan'):", txt('lan'))
 
 
-logger.info("ardSerial date: Feb. 27, 2025")
+logger.info("ardSerial date: Nov. 27, 2025")
 
 def encode(in_str, encoding='utf-8'):
     if isinstance(in_str, bytes):
@@ -802,7 +802,7 @@ def keepCheckingPort(portList, cond1=None, check=True, updateFunc = lambda:None)
                     logger.debug(f"Adding serial port: {p}")
                     portName = p.split('/')[-1]
                     portStrList.insert(0, portName)  # remove '/dev/' in the port name
-                    tk.messagebox.showinfo(title=txt('Info'), message=txt('New port prompt') + portName)
+                    # Note: Do NOT show messagebox here as this runs in a background thread
             updateFunc()
         elif set(allPorts) - set(currentPorts):
             time.sleep(1) #usbmodem is slower in detection
@@ -1019,11 +1019,15 @@ def replug(PortList, needSendTask=True, needOpenPort=True):
     window.focus_force()  # new window gets focus
     window.mainloop()
     
-def selectList(PortList,ls,win, needSendTask=True, needOpenPort=True):
+def selectList(PortList,ls,win, portMap, needSendTask=True, needOpenPort=True):
     
     global goodPortCount
+    success = False
+    error_msg = None
+    
     for i in ls.curselection():
-        p = ls.get(i)#.split('/')[-1]
+        displayName = ls.get(i)
+        p = portMap.get(displayName, displayName)
         try:
             print(p)
             print(p.split('/')[-1])
@@ -1038,38 +1042,79 @@ def selectList(PortList,ls,win, needSendTask=True, needOpenPort=True):
                 time.sleep(2)
                 result = sendTask(PortList, serialObject, ['?', 0])
                 getModelAndVersion(result)
-            win.withdraw()
+            success = True
 
         except Exception as e:
-            tk.messagebox.showwarning(title=txt('Warning'), message=txt('* Port ') + p + txt(' cannot be opened'))
+            error_msg = txt('* Port ') + p + txt(' cannot be opened')
+            logger.error(f"Cannot open {p}: {e}")
             print("Cannot open {}".format(p))
-            raise e
+    
+    # Close window first, then show any error messages
     win.destroy()
+    
+    if error_msg and not success:
+        tk.messagebox.showwarning(title=txt('Warning'), message=error_msg)
 
 def manualSelect(PortList, window, needSendTask=True, needOpenPort=True):
-    allPorts = deleteDuplicatedUsbSerial(Communication.Print_Used_Com())
+    # allPorts = deleteDuplicatedUsbSerial(Communication.Print_Used_Com())
+    allPorts = Communication.Print_Used_Com()
+    
+    # Clear previous widgets to avoid conflicts
+    for widget in window.winfo_children():
+        widget.destroy()
+    
     window.title(txt('Manual mode'))
+    # Make window reasonably sized and resizable
+    try:
+        window.geometry('720x420+700+400')
+    except Exception:
+        pass
+    window.resizable(True, True)
+    window.grid_columnconfigure(0, weight=1)
+    window.grid_rowconfigure(2, weight=1)
     l1 = tk.Label(window, font = 'sans 14 bold')
     l1['text'] = txt('Manual mode')
-    l1.grid(row=0,column = 0)
+    l1.grid(row=0,column = 0, sticky='w', padx=5, pady=5)
     l2 = tk.Label(window, font='sans 14 bold')
     l2["text"]=txt('Please select the port from the list')
-    l2.grid(row=1,column=0)
-    ls = tk.Listbox(window,selectmode="multiple")
-    ls.grid(row=2,column=0)
+    l2.grid(row=1,column=0, sticky='w', padx=5)
+    ls = tk.Listbox(window, selectmode="browse")
+    ls.grid(row=2, column=0, sticky='nsew', padx=5, pady=5)
+
+    # Map display names to full paths (hide parent directories)
+    portMap = {}
+    def populate_listbox(ports):
+        ls.delete(0, tk.END)
+        portMap.clear()
+        nameCount = {}
+        for p in ports:
+            base = p.split('/')[-1]
+            # Ensure uniqueness if duplicates
+            disp = base
+            if base in nameCount:
+                nameCount[base] += 1
+                disp = f"{base} ({nameCount[base]})"
+            else:
+                nameCount[base] = 1
+            portMap[disp] = p
+            ls.insert(tk.END, disp)
+
+    populate_listbox(allPorts)
+
     def refreshBox(ls):
-        allPorts = deleteDuplicatedUsbSerial(Communication.Print_Used_Com())
-        ls.delete(0,tk.END)
-        for p in allPorts:
-            ls.insert(tk.END,p)
-    for p in allPorts:
-        ls.insert(tk.END,p)
-    bu = tk.Button(window, text=txt('OK'), command=lambda:selectList(PortList, ls, window, needSendTask, needOpenPort))
-    bu.grid(row=2, column=1)
+        # allPorts = deleteDuplicatedUsbSerial(Communication.Print_Used_Com())
+        ports = Communication.Print_Used_Com()
+        populate_listbox(ports)
+
+    bu = tk.Button(window, text=txt('OK'), command=lambda:selectList(PortList, ls, window, portMap, needSendTask, needOpenPort))
+    bu.grid(row=2, column=1, sticky='n', padx=5, pady=5)
     bu2 = tk.Button(window, text=txt('Refresh'), command=lambda:refreshBox(ls))
-    bu2.grid(row=1, column=1)
-    tk.messagebox.showwarning(title=txt('Warning'), message=txt('Manual mode'))
-    window.mainloop()
+    bu2.grid(row=1, column=1, sticky='n', padx=5)
+    
+    # Show info message after window is ready, using after to avoid blocking
+    window.after(100, lambda: tk.messagebox.showinfo(title=txt('Info'), message=txt('Manual mode')))
+    
+    # Note: Do NOT call mainloop() here as the parent window already has one running
 
 def monitoringVoltage(ports, VoltagePin, timer, callback):
     while True and len(ports):

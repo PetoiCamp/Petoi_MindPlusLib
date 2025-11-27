@@ -4,11 +4,7 @@
 # Python
 from ardSerial import *
 from SerialCommunication import *
-import struct
-import time
-import re
-import platform
-import os
+
 
 intoCameraMode = False
 intoGestureMode = False
@@ -155,20 +151,51 @@ def getPortList():
 
 # deactivate the gyro
 def deacGyro():
-    boardVer = config.version_
-    # printH("boardVer:", boardVer)
-    if boardVer[0] == 'N':
-        res = send(goodPorts, ['G', 0])
-        # printH("gyro status:",res )
-        logger.debug(f'gyro status:{res}')
-        if res != -1 and res[0][0] == 'G':
-            res = send(goodPorts, ['G', 0])
-            # printH("gyro status:",res )
-            logger.debug(f'gyro status:{res}')
-    else:
-        res = send(goodPorts, ['gb', 0])
-        if res != -1 and res[0][0] == 'g':
-            logger.debug(f'gyro is deactived successfully.')
+    """
+    关闭陀螺仪 - 支持多个不同型号的设备
+    遍历所有连接的串口，根据每个设备的 boardVer 发送相应的陀螺仪关闭命令
+    """
+    # 遍历所有连接的串口
+    for serialObj, portName in goodPorts.items():
+        try:
+            # 向该串口查询设备信息
+            result = sendTask(goodPorts, serialObj, ['?', 0], 2)
+            
+            if result != -1:
+                # 解析设备型号和版本
+                parse = result[1].replace('\r','').split('\n')
+                boardVer = None
+                # modelName = None
+                
+                for l in range(len(parse)):
+                    if 'Nybble' in parse[l] or 'Bittle' in parse[l] or 'DoF16' in parse[l] or 'Chero' in parse[l]:
+                        # modelName = parse[l]
+                        boardVer = parse[l+1]
+                        # print(f'Port {portName}: {modelName}')
+                        # printH(f"Port {portName} boardVer:", boardVer)
+                        break
+                
+                if boardVer is not None:
+                    # 根据 boardVer 发送相应的陀螺仪关闭命令
+                    if boardVer[0] == 'N':
+                        # NyBoard: 发送 'G' 命令
+                        res = sendTask(goodPorts, serialObj, ['G', 0])
+                        logger.debug(f'Port {portName}: gyro status = {res}')
+                        if res != -1 and res[0][0] == 'G':
+                            res = sendTask(goodPorts, serialObj, ['G', 0])
+                            logger.debug(f'Port {portName}: gyro status = {res}')
+                    else:
+                        # BiBoard: 发送 'gb' 命令
+                        res = sendTask(goodPorts, serialObj, ['gb', 0])
+                        if res != -1 and res[0][0] == 'g':
+                            logger.debug(f'Port {portName}: gyro is deactivated successfully.')
+                else:
+                    print(f'* Port {portName}: No board version found!')
+            else:
+                print(f'* Port {portName}: Cannot get device information!')
+                
+        except Exception as e:
+            logger.error(f'Port {portName}: Error in deacGyro - {e}')
 
 
 # get the current angle list of all joints
@@ -417,6 +444,11 @@ def savePortsToConfig(allPortsList, validPortsList):
         except Exception as e:
             print(f'* Error reading config file: {e}')
     
+    # 确保现有的每一行都以换行符结尾（修复文件格式问题）
+    for i in range(len(lines)):
+        if not lines[i].endswith('\n'):
+            lines[i] += '\n'
+    
     # 确保至少有10行
     while len(lines) < 10:
         lines.append('\n')
@@ -445,9 +477,6 @@ def autoConnect():
     智能自动连接串口，支持配置文件持久化
     按照优化的逻辑：只检查有效串口和新增串口，避免重复检查已知无效的串口
     """
-    import sys
-    from ardSerial import Communication, testPort, showSerialPorts
-    
     # 创建空列表
     CheckList = []
     newValidPorts = []
@@ -493,7 +522,9 @@ def autoConnect():
     
     logger.debug(f'CheckList: {CheckList}')
     
-    # 对 CheckList 中每一个串口设备逐个尝试打开
+    # 使用多线程方式对 CheckList 中每一个串口设备尝试打开
+    threads = list()
+    
     for portName in CheckList:
         # 构造完整的串口路径
         if platform.system() == "Windows":
@@ -504,20 +535,25 @@ def autoConnect():
         try:
             print(f'Trying port: {portName}...')
             serialObject = Communication(fullPort, 115200, 1)
-            # 测试串口是否为 Petoi 设备
-            testPort(goodPorts, serialObject, portName)
-            
-            if serialObject in goodPorts:
-                # 成功打开并验证为 Petoi 设备
-                newValidPorts.append(portName)
-                print(f'Successfully connected to port: {portName}')
-            else:
-                # 不是 Petoi 设备，关闭串口
-                serialObject.Close_Engine()
-                print(f'* Port {portName} is not connected to a Petoi device!')
+            # 创建线程来测试串口
+            t = threading.Thread(target=testPort, args=(goodPorts, serialObject, portName))
+            threads.append(t)
+            t.daemon = True
+            t.start()
         except Exception as e:
-            print(f'* Port {portName} may be occupied by another program!')
+            print(f'* Port {portName} cannot be opened!')
             logger.debug(f'Error opening port {portName}: {e}')
+    
+    # 等待所有线程完成（最多等待 8 秒）
+    for t in threads:
+        if t.is_alive():
+            t.join(timeout=8)
+    
+    # 从 goodPorts 中提取成功连接的串口名称
+    for serialObj, portName in goodPorts.items():
+        if portName in CheckList:
+            newValidPorts.append(portName)
+            print(f'Successfully connected to port: {portName}')
     
     # 检查是否有成功打开的串口
     if len(newValidPorts) == 0:
