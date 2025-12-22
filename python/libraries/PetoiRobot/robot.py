@@ -1,25 +1,29 @@
-#  -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 # MindPlus
 # Python
-from ardSerial import *
-from SerialCommunication import *
-
+from .ardSerial import *
+#from .SerialCommunication import *
+# import struct
+# import time
+# import re
+# import platform
+# import os
 
 intoCameraMode = False
 intoGestureMode = False
 backTouchMode = False
 
 if platform.system() == "Windows":    # for Windows
-    seperation = '\\'
+    separation = '\\'
     homeDri = os.getenv('HOMEDRIVE') 
     homePath = os.getenv('HomePath') 
     configDir = homeDri + homePath
 else:  # for Linux & macOS
-    seperation = '/'
+    separation = '/'
     home = os.getenv('HOME') 
     configDir = home 
-configDir = configDir + seperation +'.config' + seperation +'Petoi'
+configDir = configDir + separation +'.config' + separation +'Petoi'
 
 modelName = 'Bittle'
 
@@ -28,7 +32,8 @@ def printH(head, value):
     print(head, end=' ')
     print(value)
 
-printH("Mind+ date: ", "Feb 25, 2025")
+if not config.SHOW_GUI:
+    printH("Mind+ date: ", "Dec 9, 2025")
 
 
 def makeDirectory(path):
@@ -42,18 +47,18 @@ def makeDirectory(path):
     isExists = os.path.exists(path)
     
     if not isExists:
-        # printH("model name:", path.split(seperation)[-1])
-        if path.split(seperation)[-1] == "BittleX+Arm":
-            path = seperation.join(path.split(seperation)[:-1]) + seperation + "BittleR"
+        # printH("model name:", path.split(separation)[-1])
+        if path.split(separation)[-1] == "BittleX+Arm":
+            path = separation.join(path.split(separation)[:-1]) + separation + "BittleR"
             # printH("path:", path)
             if not os.path.exists(path):
                 # Create the directory if it does not exist
-                path = seperation.join(path.split(seperation)[:-1]) + seperation + "BittleX+Arm"
+                path = separation.join(path.split(separation)[:-1]) + separation + "BittleX+Arm"
                 os.makedirs(path)
                 print(path + ' creat successfully')
             else:
                 # Change the directory name "BittleR" to "BittleX+Arm"
-                os.rename(path,seperation.join(path.split(seperation)[:-1]) + seperation + "BittleX+Arm")
+                os.rename(path,separation.join(path.split(separation)[:-1]) + separation + "BittleX+Arm")
                 # print("Rename successfully!")
         else:
             # Create the directory if it does not exist
@@ -125,9 +130,9 @@ modelDict = {'Bittle': BittleData, 'Nybble': NybbleData, 'BittleX+Arm': BittleRD
 
 def creatSkillFile():
     for key in modelDict:
-        modelDir = configDir + seperation + 'SkillLibrary' + seperation + key
+        modelDir = configDir + separation + 'SkillLibrary' + separation + key
         makeDirectory(modelDir)
-        filePath = modelDir + seperation + 'skillFileName.md'
+        filePath = modelDir + separation + 'skillFileName.md'
         if not os.path.exists(filePath):
             try:
                 with open(filePath, 'w+', encoding="utf-8") as f:
@@ -337,7 +342,7 @@ def printSkillFileName():
     else:
         modelName = config.model_
     printH("modelName:", modelName)
-    skillDir = configDir + seperation + 'SkillLibrary' + seperation + modelName
+    skillDir = configDir + separation + 'SkillLibrary' + separation + modelName
     skill_file_name=file_name(skillDir)
     print("*** The skill names you can call are as follows: ***")
     for skillName in skill_file_name:
@@ -360,210 +365,14 @@ def openPort(port):
     deacGyro()
 
 
-# get the path of configuration file
-def getConfigFilePath():
-    """获取配置文件的完整路径"""
-    return configDir + seperation + 'defaultConfig.txt'
-
-
-# read all ports from configuration file line 9
-def readAllPortsFromConfig():
-    """
-    从配置文件第9行读取上次运行时的系统串口列表
-    格式: All ports: COM3, COM5
-    返回: 串口名称列表（不含 /dev/ 前缀）
-    """
-    configPath = getConfigFilePath()
-    if not os.path.exists(configPath):
-        return []
-    
-    try:
-        with open(configPath, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            if len(lines) >= 9:
-                line9 = lines[8].strip()
-                if line9.startswith('All ports: '):
-                    # 去掉前缀 "All ports: "
-                    portsStr = line9[len('All ports: '):]
-                    if portsStr:
-                        ports = [p.strip() for p in portsStr.split(',') if p.strip()]
-                        return ports
-    except Exception as e:
-        print(f'* Error reading config file: {e}')
-    
-    return []
-
-
-# read valid ports from configuration file line 10
-def readValidPortsFromConfig():
-    """
-    从配置文件第10行读取上次运行时可以打开的串口列表
-    格式: Valid ports: COM3, COM5
-    返回: 串口名称列表（不含 /dev/ 前缀）
-    """
-    configPath = getConfigFilePath()
-    if not os.path.exists(configPath):
-        return []
-    
-    try:
-        with open(configPath, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            if len(lines) >= 10:
-                line10 = lines[9].strip()
-                if line10.startswith('Valid ports: '):
-                    # 去掉前缀 "Valid ports: "
-                    portsStr = line10[len('Valid ports: '):]
-                    if portsStr:
-                        ports = [p.strip() for p in portsStr.split(',') if p.strip()]
-                        return ports
-    except Exception as e:
-        print(f'* Error reading config file: {e}')
-    
-    return []
-
-
-# save all ports and valid ports to configuration file
-def savePortsToConfig(allPortsList, validPortsList):
-    """
-    将串口列表保存到配置文件第9行和第10行
-    参数: 
-        allPortsList - 系统所有串口列表（不含 /dev/ 前缀）
-        validPortsList - 可以打开的串口列表（不含 /dev/ 前缀）
-    """
-    configPath = getConfigFilePath()
-    
-    # 确保配置目录存在
-    makeDirectory(configDir)
-    
-    # 读取现有内容
-    lines = []
-    if os.path.exists(configPath):
-        try:
-            with open(configPath, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-        except Exception as e:
-            print(f'* Error reading config file: {e}')
-    
-    # 确保现有的每一行都以换行符结尾（修复文件格式问题）
-    for i in range(len(lines)):
-        if not lines[i].endswith('\n'):
-            lines[i] += '\n'
-    
-    # 确保至少有10行
-    while len(lines) < 10:
-        lines.append('\n')
-    
-    # 更新第9行（索引为8）- 保存系统所有串口
-    allPortsStr = 'All ports: ' + ', '.join(allPortsList)
-    lines[8] = allPortsStr + '\n'
-    
-    # 更新第10行（索引为9）- 保存可以打开的串口
-    validPortsStr = 'Valid ports: ' + ', '.join(validPortsList)
-    lines[9] = validPortsStr + '\n'
-    
-    # 写回文件
-    try:
-        with open(configPath, 'w', encoding='utf-8') as f:
-            f.writelines(lines)
-        logger.debug(f'Saved to config - All ports: {allPortsStr}')
-        logger.debug(f'Saved to config - Valid ports: {validPortsStr}')
-    except Exception as e:
-        print(f'* Error writing config file: {e}')
-
-
 # auto connect serial ports with smart configuration
 def autoConnect():
     """
     智能自动连接串口，支持配置文件持久化
     按照优化的逻辑：只检查有效串口和新增串口，避免重复检查已知无效的串口
     """
-    # 创建空列表
-    CheckList = []
-    newValidPorts = []
-    
-    # 获取当前系统中检测到的串口组成的列表
-    allPorts = Communication.Print_Used_Com()
-    showSerialPorts(allPorts)
-    
-    # 检查系统是否有串口设备
-    if len(allPorts) == 0:
-        print('No port found! Please make sure the serial port can be recognized by the computer first.')
-        sys.exit(1)
-    
-    # 提取串口名称列表（不含 /dev/ 前缀）
-    allPortNames = [port.split('/')[-1] for port in allPorts]
-    
-    # 读取配置文件
-    # 第9行：上次运行时的系统串口列表
-    previousPorts = readAllPortsFromConfig()
-    logger.debug(f'Previous ports from config: {previousPorts}')
-    
-    # 第10行：上次运行时可以打开的串口列表
-    validPorts = readValidPortsFromConfig()
-    logger.debug(f'Valid ports from config: {validPorts}')
-    
-    # 计算差异：在 allPortNames 中但不在 previousPorts 中的元素（新增的串口）
-    diffPorts = [port for port in allPortNames if port not in previousPorts]
-    logger.debug(f'Diff ports (new ports): {diffPorts}')
-    
-    # 删除 validPorts 中不在当前系统串口列表 allPortNames 中的元素
-    validPorts = [port for port in validPorts if port in allPortNames]
-    logger.debug(f'Valid ports after filtering: {validPorts}')
-    
-    # 确定检查列表 CheckList
-    if len(validPorts) == 0:
-        # 如果没有有效串口，检查所有系统串口
-        CheckList = allPortNames
-        print('No valid ports found in config. Trying all available ports...')
-    else:
-        # 有有效串口，只检查有效串口和新增串口
-        CheckList = validPorts + diffPorts
-        print(f'Trying to connect to valid ports and new ports...')
-    
-    logger.debug(f'CheckList: {CheckList}')
-    
-    # 使用多线程方式对 CheckList 中每一个串口设备尝试打开
-    threads = list()
-    
-    for portName in CheckList:
-        # 构造完整的串口路径
-        if platform.system() == "Windows":
-            fullPort = portName
-        else:
-            fullPort = '/dev/' + portName
-        
-        try:
-            print(f'Trying port: {portName}...')
-            serialObject = Communication(fullPort, 115200, 1)
-            # 创建线程来测试串口
-            t = threading.Thread(target=testPort, args=(goodPorts, serialObject, portName))
-            threads.append(t)
-            t.daemon = True
-            t.start()
-        except Exception as e:
-            print(f'* Port {portName} cannot be opened!')
-            logger.debug(f'Error opening port {portName}: {e}')
-    
-    # 等待所有线程完成（最多等待 8 秒）
-    for t in threads:
-        if t.is_alive():
-            t.join(timeout=8)
-    
-    # 从 goodPorts 中提取成功连接的串口名称
-    for serialObj, portName in goodPorts.items():
-        if portName in CheckList:
-            newValidPorts.append(portName)
-            print(f'Successfully connected to port: {portName}')
-    
-    # 检查是否有成功打开的串口
-    if len(newValidPorts) == 0:
-        print('No port found! Please make sure the serial port can be recognized by the computer first.')
-        sys.exit(1)
-    
-    # 更新配置文件
-    # 第9行：保存此次运行程序时的系统串口列表
-    # 第10行：保存此次运行程序得到的可以打开的串口列表
-    savePortsToConfig(allPortNames, newValidPorts)
+    # 调用 ardSerial.py 中的 smartConnectPorts 函数
+    smartConnectPorts()
     
     # 打印可用技能名称
     logger.debug(f'goodPorts: {goodPorts}')
@@ -628,9 +437,9 @@ def loadSkill(fileName, delayTime):
     global modelName
     # get the path of the exported skill file
     if ".md" in fileName:
-        skillFilePath = configDir + seperation + 'SkillLibrary' + seperation + modelName + seperation + fileName
+        skillFilePath = configDir + separation + 'SkillLibrary' + separation + modelName + separation + fileName
     else:
-        skillFilePath = configDir + seperation + 'SkillLibrary' + seperation + modelName + seperation + fileName +'.md'
+        skillFilePath = configDir + separation + 'SkillLibrary' + separation + modelName + separation + fileName +'.md'
 
     logger.debug(f'skillFilePath:{skillFilePath}')
 

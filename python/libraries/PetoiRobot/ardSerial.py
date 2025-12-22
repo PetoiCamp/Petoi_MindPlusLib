@@ -1,34 +1,24 @@
 #!/usr/bin/python3
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import struct
 import sys
 import time
-import logging
-from SerialCommunication import *  # module SerialCommunication.py
 import platform
 import copy
-import threading
-import os
-import config
+import os 
 import glob
 import re
 
-FORMAT = '%(asctime)-15s %(name)s - %(levelname)s - %(message)s'
-'''
-Level: The level determines the minimum priority level of messages to log. 
-Messages will be logged in order of increasing severity: 
-DEBUG is the least threatening, 
-INFO is also not very threatening, 
-WARNING needs attention, 
-ERROR needs immediate attention, 
-and CRITICAL means “drop everything and find out what’s wrong.” 
-The default starting point is INFO, 
-which means that the logging module will automatically filter out any DEBUG messages.
-'''
-# logging.basicConfig(level=logging.DEBUG, format=FORMAT)
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-logger = logging.getLogger(__name__)
+# Handle both relative imports (when used as a module) and absolute imports (when run directly)
+# Try relative imports first (when used as a module), fall back to absolute imports (when run directly)
+try:
+    from .commonVar import *
+    from .SerialCommunication import *  # module SerialCommunication.py
+except (ImportError, ValueError):
+    # When running directly as a script or relative import fails, use absolute imports
+    from commonVar import *
+    from SerialCommunication import *  # module SerialCommunication.py
 
 
 def printH(head, value):
@@ -36,23 +26,19 @@ def printH(head, value):
     print(value)
 
 
-if not config.useMindPlus:
+if config.SHOW_GUI:
     import tkinter as tk
     import tkinter.messagebox
-    sys.path.append("../pyUI")
+    # sys.path.append("../pyUI")
+    sys.path.append("..")
     from translate import *
     language = languageList['English']
 
     def txt(key):
-        global language
-        logger.debug(f"config.strLan is: {config.strLan}.")
-        language = languageList[config.strLan]
         return language.get(key, textEN[key])
 
-    # printH("txt('lan'):", txt('lan'))
-
-
-logger.info("ardSerial date: Nov. 27, 2025")
+ardSerialDate = "Dec. 16, 2025"
+logger.info(f"ardSerial date: {ardSerialDate}")
 
 def encode(in_str, encoding='utf-8'):
     if isinstance(in_str, bytes):
@@ -167,8 +153,8 @@ def serialWriteNumToByte(port, token, var=None):  # Only to be used for c m u b 
         raise
     
     logger.debug(f"!!!! {in_str}")
-            #print(encode(in_str))
-#            port.Send_data(encode(message))
+    # print(encode(in_str))
+    # port.Send_data(encode(message))
 
 
 def serialWriteByte(port, var=None):
@@ -688,6 +674,7 @@ def getModelAndVersion(result):
                 return
     config.model_ = 'Bittle'
     config.version_ = 'Unknown'
+    # printH("@aaa config.version_:", config.version_)
     
 def updatePostureTable():
     global postureTable
@@ -702,19 +689,20 @@ def updatePostureTable():
             postureTable = postureDict['Bittle']
     
 def deleteDuplicatedUsbSerial(list):
-    for item in list:
-        if 'modem' in item: # prefer the USB modem device because it can restart the NyBoard
-            serialNumber = item[item.index('modem')+5:]
-            for name in list:
-                if serialNumber in name and 'modem' not in name:    # remove the "wch" device
-                    list.remove(name)
-        elif 'serial-' in item: # prefer the "serial-" device 
-            serialNumber = item[item.index('serial-')+7:]
-            for name in list:
-                if serialNumber in name and 'wch' in name:    # remove the "wch" device
-                    list.remove(name)
-        elif 'cu.SLAB_USBtoUART' in item:
-            list.remove(item)
+    if platform.system() != "Windows":
+        for item in list:
+            if 'modem' in item: # prefer the USB modem device because it can restart the NyBoard
+                serialNumber = item[item.index('modem')+5:]
+                for name in list:
+                    if serialNumber in name and 'modem' not in name:    # remove the "wch" device
+                        list.remove(name)
+            elif 'serial-' in item: # prefer the "serial-" device 
+                serialNumber = item[item.index('serial-')+7:]
+                for name in list:
+                    if serialNumber in name and 'wch' in name:    # remove the "wch" device
+                        list.remove(name)
+            elif 'cu.SLAB_USBtoUART' in item:
+                list.remove(item)
     return list
     
 def testPort(PortList, serialObject, p):
@@ -794,6 +782,7 @@ def keepCheckingPort(portList, cond1=None, check=True, updateFunc = lambda:None)
             time.sleep(1) #usbmodem is slower in detection
             currentPorts = Communication.Print_Used_Com()
             newPort = deleteDuplicatedUsbSerial(list(set(currentPorts) - set(allPorts)))
+            # newPort = list(set(currentPorts) - set(allPorts))
             if check:
                 time.sleep(0.5)
                 checkPortList(portList, newPort)
@@ -868,7 +857,9 @@ def showSerialPorts(allPorts):
                 allPorts.append(port)
         # printH("allPorts:", allPorts)
 
-    allPorts = deleteDuplicatedUsbSerial(allPorts)
+    if not config.SHOW_GUI:
+        allPorts = deleteDuplicatedUsbSerial(allPorts)
+
     for index in range(len(allPorts)):
         logger.debug(f"port[{index}] is {allPorts[index]} ")
     logger.info(f"*** Available serial ports: ***")
@@ -880,10 +871,246 @@ def showSerialPorts(allPorts):
         for p in allPorts:
              if 'cu.usb' in p:
                 print('\n* Manually connect to the following port if it fail to connect automatically\n')
-                if config.useMindPlus:
+                if not config.SHOW_GUI:
                     print(p.replace('/dev/',''),end='\n\n')
                 else:
                     print(p, end='\n\n')
+    return allPorts
+
+
+# get the path of configuration file
+def getConfigFilePath(configDir, separation):
+    """获取配置文件的完整路径"""
+    return configDir + separation + 'defaultConfig.txt'
+
+
+# read all ports from configuration file line 9
+def readAllPortsFromConfig():
+    """
+    从配置文件第9行读取上次运行时的系统串口列表
+    格式: All ports: COM3, COM5
+    返回: 串口名称列表（不含 /dev/ 前缀）
+    """
+    configPath = defaultConfPath    # 在commonVar.py中定义
+    if not os.path.exists(configPath):
+        return []
+    
+    try:
+        with open(configPath, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            if len(lines) >= 9:
+                line9 = lines[8].strip()
+                if line9.startswith('All ports: '):
+                    # 去掉前缀 "All ports: "
+                    portsStr = line9[len('All ports: '):]
+                    if portsStr:
+                        ports = [p.strip() for p in portsStr.split(',') if p.strip()]
+                        return ports
+    except Exception as e:
+        print(f'* Error reading config file: {e}')
+    
+    return []
+
+
+# read valid ports from configuration file line 10
+def readValidPortsFromConfig():
+    """
+    从配置文件第10行读取上次运行时可以打开的串口列表
+    格式: Valid ports: COM3, COM5
+    返回: 串口名称列表（不含 /dev/ 前缀）
+    """
+    configPath = defaultConfPath    # 在commonVar.py中定义
+    if not os.path.exists(configPath):
+        return []
+    
+    try:
+        with open(configPath, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            if len(lines) >= 10:
+                line10 = lines[9].strip()
+                if line10.startswith('Valid ports: '):
+                    # 去掉前缀 "Valid ports: "
+                    portsStr = line10[len('Valid ports: '):]
+                    if portsStr:
+                        ports = [p.strip() for p in portsStr.split(',') if p.strip()]
+                        return ports
+    except Exception as e:
+        print(f'* Error reading config file: {e}')
+    
+    return []
+
+
+# save all ports and valid ports to configuration file
+def savePortsToConfig(allPortsList, validPortsList):
+    """
+    将串口列表保存到配置文件第9行和第10行
+    参数: 
+        configDir - 配置目录路径，在commonVar.py中定义
+        separation - 路径分隔符，在commonVar.py中定义
+        allPortsList - 系统所有串口列表（不含 /dev/ 前缀）
+        validPortsList - 可以打开的串口列表（不含 /dev/ 前缀）
+    """
+    # 确保配置目录存在
+    if not os.path.exists(configDir):
+        os.makedirs(configDir)
+
+    configPath = defaultConfPath    # 在commonVar.py中定义
+    
+    # 读取现有内容
+    lines = []
+    if os.path.exists(configPath):
+        try:
+            with open(configPath, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except Exception as e:
+            print(f'* Error reading config file: {e}')
+    
+    # 确保现有的每一行都以换行符结尾（修复文件格式问题）
+    for i in range(len(lines)):
+        if not lines[i].endswith('\n'):
+            lines[i] += '\n'
+    
+    # 确保至少有10行
+    while len(lines) < 10:
+        lines.append('\n')
+    
+    # 更新第9行（索引为8）- 保存系统所有串口
+    allPortsStr = 'All ports: ' + ', '.join(allPortsList)
+    lines[8] = allPortsStr + '\n'
+    
+    # 更新第10行（索引为9）- 保存可以打开的串口
+    validPortsStr = 'Valid ports: ' + ', '.join(validPortsList)
+    lines[9] = validPortsStr + '\n'
+    
+    # 写回文件
+    try:
+        with open(configPath, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+        logger.debug(f'Saved to config - All ports: {allPortsStr}')
+        logger.debug(f'Saved to config - Valid ports: {validPortsStr}')
+    except Exception as e:
+        print(f'* Error writing config file: {e}')
+
+
+# smart connect serial ports with smart configuration
+def smartConnectPorts():
+    """
+    智能自动连接串口，支持配置文件持久化
+    按照优化的逻辑：只检查有效串口和新增串口，避免重复检查已知无效的串口
+    
+    参数:
+        configDir - 配置目录路径
+        separation - 路径分隔符
+    
+    返回:
+        newValidPorts - 成功连接的串口名称列表
+    """
+    # 创建空列表
+    CheckList = []
+    newValidPorts = []
+    
+    # 获取当前系统中检测到的串口组成的列表
+    allPortsRaw = Communication.Print_Used_Com()
+    allPorts = showSerialPorts(allPortsRaw)
+
+    # 检查系统是否有串口设备
+    if len(allPorts) == 0:
+        if not config.SHOW_GUI:
+            print('No port found! Please make sure the serial port can be recognized by the computer first.')
+            sys.exit(1)
+    
+    # 提取串口名称列表（不含 /dev/ 前缀）
+    allPortNames = [port.split('/')[-1] for port in allPorts]
+    
+    # Remove duplicate ports from the same device (prefer wchusbserial over usbmodem)
+    # Convert back to full paths for deleteDuplicatedUsbSerial, then extract names again
+    allPortsFiltered = deleteDuplicatedUsbSerial(allPorts.copy())
+    allPortNames = [port.split('/')[-1] for port in allPortsFiltered]
+    
+    # 读取配置文件
+    # 第9行：上次运行时的系统串口列表
+    previousPorts = readAllPortsFromConfig()
+    logger.debug(f'Previous ports from config: {previousPorts}')
+    
+    # 第10行：上次运行时可以打开的串口列表
+    validPorts = readValidPortsFromConfig()
+    logger.debug(f'Valid ports from config: {validPorts}')
+    
+    # 计算差异：在 allPortNames 中但不在 previousPorts 中的元素（新增的串口）
+    diffPorts = [port for port in allPortNames if port not in previousPorts]
+    logger.debug(f'Diff ports (new ports): {diffPorts}')
+    
+    # 删除 validPorts 中不在当前系统串口列表 allPortNames 中的元素
+    validPorts = [port for port in validPorts if port in allPortNames]
+    logger.debug(f'Valid ports after filtering: {validPorts}')
+    
+    # 确定检查列表 CheckList
+    if len(validPorts) == 0:
+        # 如果没有有效串口，检查所有系统串口
+        CheckList = allPortNames
+        print('No valid ports found in config. Trying all available ports...')
+    else:
+        # 有有效串口，只检查有效串口和新增串口
+        CheckList = validPorts + diffPorts
+        print(f'Trying to connect to valid ports and new ports...')
+    
+    logger.debug(f'CheckList: {CheckList}')
+    
+    # 使用多线程方式对 CheckList 中每一个串口设备尝试打开
+    threads = list()
+    
+    for portName in CheckList:
+        # 构造完整的串口路径
+        if platform.system() == "Windows":
+            fullPort = portName
+        else:
+            fullPort = '/dev/' + portName
+        
+        try:
+            print(f'Trying port: {portName}...')
+            serialObject = Communication(fullPort, 115200, 1)
+            # 创建线程来测试串口
+            t = threading.Thread(target=testPort, args=(goodPorts, serialObject, portName))
+            threads.append(t)
+            t.daemon = True
+            t.start()
+        except Exception as e:
+            print(f'* Port {portName} cannot be opened!')
+            logger.debug(f'Error opening port {portName}: {e}')
+    
+    # 等待所有线程完成（最多等待 8 秒）
+    for t in threads:
+        if t.is_alive():
+            t.join(timeout=8)
+    
+    # 从 goodPorts 中提取成功连接的串口名称
+    for serialObj, portName in goodPorts.items():
+        if portName in CheckList:
+            newValidPorts.append(portName)
+            print(f'Successfully connected to port: {portName}')
+    
+    # 检查是否有成功打开的串口
+    if len(newValidPorts) == 0:
+        print('No port found! Please make sure the serial port can be recognized by the computer first.')
+        if not config.SHOW_GUI:
+            sys.exit(1)
+        else:
+            print('Replug mode')
+            replug(goodPorts)
+            if goodPorts:
+                # 从 goodPorts 中提取成功连接的串口名称
+                for serialObj, portName in goodPorts.items():
+                    if portName in CheckList:
+                        newValidPorts.append(portName)
+                        allPortNames.append(portName)
+                        print(f'Successfully connected to port: {portName}')
+    
+    # 更新配置文件
+    # 第9行：保存此次运行程序时的系统串口列表
+    # 第10行：保存此次运行程序得到的可以打开的串口列表
+    savePortsToConfig(allPortNames, newValidPorts)
+    
+    return newValidPorts
 
                 
 def connectPort(PortList, needTesting=True, needSendTask=True, needOpenPort=True):
@@ -900,9 +1127,8 @@ def connectPort(PortList, needTesting=True, needSendTask=True, needOpenPort=True
     if needOpenPort is True:
         if len(PortList) == 0:
             print('No port found! Please make sure the serial port can be recognized by the computer first.')
-            if not config.useMindPlus:
-                print('Replug mode')
-                replug(PortList, needSendTask, needOpenPort)
+            print('Replug mode')
+            replug(PortList, needSendTask, needOpenPort)
         else:
             logger.info(f"Connect to serial port list:")
             for p in PortList:
@@ -968,30 +1194,99 @@ def replug(PortList, needSendTask=True, needOpenPort=True):
                 timePassed = 0
             else:
                 dif = list(set(curPorts)-set(ap))
-                dif = deleteDuplicatedUsbSerial(dif)
-                print("diff:",end=" ")
-                print(dif)
-                
+                if needSendTask and needOpenPort:
+                    # Remove duplicate ports from the same device (prefer wchusbserial over usbmodem)
+                    dif = deleteDuplicatedUsbSerial(dif)
+                printH("diff:", dif)
+
                 success = False
+                connected_serial_numbers = set()  # Track connected devices to avoid duplicates
                 for p in dif:
                     try:
                         portName = p.split('/')[-1]
+                        serialNumber = None
+
                         if needOpenPort is True:
+                            # Extract serial number to check if this device is already connected
+                            if 'wchusbserial' in portName:
+                                serialNumber = portName[portName.index('wchusbserial') + len('wchusbserial'):]
+                            elif 'usbmodem' in portName:
+                                serialNumber = portName[portName.index('usbmodem') + len('usbmodem'):]
+                            
+                            # Skip if this device is already connected
+                            if serialNumber and serialNumber in connected_serial_numbers:
+                                logger.info(f"Skipping duplicate port {portName} (device {serialNumber} already connected)")
+                                continue
+                        
                             logger.info(f"Connected to serial port: {p}")
                             serialObject = Communication(p, 115200, 1)
                             PortList.update({serialObject: portName})
-                        portStrList.insert(0, portName)  # remove '/dev/' in the port name
-                        goodPortCount += 1
-                        tk.messagebox.showinfo(title=txt('Info'), message=txt('New port prompt') + portName)
-
-                        if (needOpenPort is True) and (needSendTask is True):
-                            time.sleep(2)
-                            result = sendTask(PortList, serialObject, ['?', 0])
-                            getModelAndVersion(result)
-                        
-                        success = True
+                            
+                            # Mark this device as connected before sendTask to avoid blocking
+                            if serialNumber:
+                                connected_serial_numbers.add(serialNumber)
+                            
+                            # Perform sendTask to verify it's a Petoi device
+                            if needSendTask is True:
+                                # Use threading.Event to synchronize with background thread
+                                device_info_event = threading.Event()
+                                device_info_success = [False]  # Use list to allow modification in nested function
+                                
+                                def get_device_info():
+                                    try:
+                                        time.sleep(2)
+                                        result = sendTask(PortList, serialObject, ['?', 0])
+                                        # printH("@aaa result:", result)
+                                        getModelAndVersion(result)
+                                        # Check if device info was successfully retrieved
+                                        if config.version_ != '' and config.version_ != 'Unknown':
+                                            device_info_success[0] = True
+                                    except Exception as e:
+                                        logger.error(f"Error getting device info: {e}")
+                                    finally:
+                                        # Signal that device info check is complete
+                                        device_info_event.set()
+                                
+                                # Run in background thread
+                                info_thread = threading.Thread(target=get_device_info, daemon=True)
+                                info_thread.start()
+                                
+                                # Wait for device info check to complete (with timeout)
+                                # Use a reasonable timeout (e.g., 10 seconds) to avoid hanging forever
+                                device_info_event.wait(timeout=10)
+                                
+                                # Check result after thread completes
+                                if device_info_success[0]:
+                                    # Device info check successful, add to lists
+                                    portStrList.insert(0, portName)  # remove '/dev/' in the port name
+                                    goodPortCount += 1
+                                    tk.messagebox.showinfo(title=txt('Info'), message=txt('New port prompt') + portName)
+                                    logger.info(f"Successfully connected to port: {portName}")
+                                    success = True
+                                else:
+                                    # Device info check failed or timed out
+                                    logger.warning(f"Device info check failed or timed out for port {portName}")
+                                    # Close the port since it's not a Petoi device
+                                    try:
+                                        serialObject.Close_Engine()
+                                        PortList.pop(serialObject, None)
+                                    except:
+                                        pass
+                            else:
+                                # No need to check device info, add to lists directly
+                                portStrList.insert(0, portName)  # remove '/dev/' in the port name
+                                goodPortCount += 1
+                                tk.messagebox.showinfo(title=txt('Info'), message=txt('New port prompt') + portName)
+                                logger.info(f"Successfully connected to port: {portName}")
+                                success = True
+                        else:
+                            # needOpenPort is False, just add to portStrList
+                            portStrList.insert(0, portName)  # remove '/dev/' in the port name
+                            goodPortCount += 1
+                            success = True
                     except Exception as e:
-                        raise e
+                        # Log error but continue trying other ports
+                        logger.error(f"Cannot open {p}: {e}")
                         print("Cannot open {}".format(p))
                 for p in ap:
                     # logger.debug(f"datatype of p : {type(p)}")
@@ -999,7 +1294,11 @@ def replug(PortList, needSendTask=True, needOpenPort=True):
                     portStrList.append(p)
 
                 if success:
+                    # Quit mainloop first, then destroy window
+                    # This ensures replug() function returns immediately
+                    window.quit()
                     window.destroy()
+                    return
                 else:
                     labelT.destroy()
                     label.destroy()
@@ -1021,9 +1320,12 @@ def replug(PortList, needSendTask=True, needOpenPort=True):
     
 def selectList(PortList,ls,win, portMap, needSendTask=True, needOpenPort=True):
     
-    global goodPortCount
+    global goodPortCount, manuallySelectedPort
     success = False
     error_msg = None
+    
+    # Mark that port was manually selected by user
+    manuallySelectedPort = True
     
     for i in ls.curselection():
         displayName = ls.get(i)
@@ -1176,6 +1478,9 @@ portStrList = []    # portStrList is the serial port string list
 initialized = False
 goodPortCount = 0
 sync = 0
+
+# Flag to track if port was manually selected by user
+manuallySelectedPort = False
 lock = threading.Lock()
 returnValue = ''
 timePassed = 0
@@ -1194,7 +1499,8 @@ def distanceHanle(distance):
 
 if __name__ == '__main__':
     try:
-        connectPort(goodPorts)
+        # connectPort(goodPorts)
+        smartConnectPorts()
         t = threading.Thread(target=keepCheckingPort, args=(goodPorts,))
         t.daemon = True
         t.start()
