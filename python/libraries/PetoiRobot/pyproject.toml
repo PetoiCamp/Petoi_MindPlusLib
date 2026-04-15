@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "petoi-robot"
+version = "0.1.0"
+description = "Petoi OpenCat Python library (PetoiRobot)"
+requires-python = ">=3.7"
+dependencies = [
+    "pyserial==3.5",
+]
+
+[tool.setuptools]
+packages = ["PetoiRobot"]
+
+[tool.setuptools.package-dir]
+PetoiRobot = "."

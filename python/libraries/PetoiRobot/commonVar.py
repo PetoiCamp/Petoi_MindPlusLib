@@ -140,7 +140,8 @@ modelOptions = [
     'Bittle X',
     'Bittle X+Arm',
     'DoF16',
-    'Chero'
+    'Chero',
+    'Mini'
 ]
 
 NaJoints = {
@@ -149,7 +150,8 @@ NaJoints = {
 #    'BittleX': [1, 2, 3, 4, 5, 6, 7],
     'BittleX+Arm': [3, 4, 5, 6, 7],
     'DoF16' : [],
-    'Chero' : []
+    'Chero' : [],
+    'Mini' : []
 }
 
 BittleRScaleNames = [
@@ -164,12 +166,19 @@ RegularScaleNames = [
     'Arm', 'Arm', 'Arm', 'Arm',
     'Knee', 'Knee', 'Knee', 'Knee']
 
+# For 6-DoF models (Chero / Mini)
+DoF6ScaleNames = [
+    'Head Pan', 'Head Tilt',
+    'Shoulder', 'Shoulder', 'Shoulder', 'Shoulder'
+]
+
 scaleNames = {
     'Nybble': RegularScaleNames,
     'Bittle': RegularScaleNames,
     'BittleX+Arm': BittleRScaleNames,
     'DoF16': RegularScaleNames,
-    'Chero': RegularScaleNames
+    'Chero': DoF6ScaleNames,
+    'Mini': DoF6ScaleNames
 }
 
 sideNames = ['Left Front', 'Right Front', 'Right Back', 'Left Back']
@@ -217,7 +226,7 @@ defaultConfPath = configDir + separation + 'defaultConfig.txt'
 print(defaultConfPath)
 
 def saveConfigToFile(configuration, filename):
-        # 读取现有内容
+        # Read existing file content
         lines = []
         if os.path.exists(filename):
             try:
@@ -226,20 +235,20 @@ def saveConfigToFile(configuration, filename):
             except Exception as e:
                 print(f'* Error reading config file: {e}')
 
-        # 确保现有的每一行都以换行符结尾（修复文件格式问题）
+        # Ensure every line ends with a newline (fixes inconsistent file formatting)
         for i in range(len(lines)):
             if not lines[i].endswith('\n'):
                 lines[i] += '\n'
         
-        # 确保至少有10行
+        # Ensure at least 10 lines exist
         while len(lines) < 10:
             lines.append('\n')
         
-        # 更新界面中的相关配置信息
+        # Update configuration lines from the UI
         for i in range(len(configuration)):
             lines[i] = configuration[i] + '\n'
         
-        # 写回文件
+        # Write back to file
         try:
             with open(filename, 'w', encoding='utf-8') as f:
                 f.writelines(lines)

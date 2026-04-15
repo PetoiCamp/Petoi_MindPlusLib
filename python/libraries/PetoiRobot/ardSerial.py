@@ -63,7 +63,7 @@ def serialWriteNumToByte(port, token, var=None):  # Only to be used for c m u b 
             skillHeader = 7
             
         # Determine frame size based on robot model
-        if hasattr(config, 'model_') and config.model_ and 'Chero' in config.model_:
+        if hasattr(config, 'model_') and config.model_ and 'Chero' in config.model_ or 'Mini' in config.model_:
             maxJoints = 6
         else:
             maxJoints = 16
@@ -121,12 +121,12 @@ def serialWriteNumToByte(port, token, var=None):  # Only to be used for c m u b 
                 message +=  (str(round(element))+" ")
             in_str = token.encode()+encode(message) +'\n'.encode()
 
-    # 添加超时机制，防止在错误的串口上阻塞
+    # Time out writes so we do not block indefinitely on a wrong port
     try:
-        # 设置写超时为 2 秒
+        # Set write timeout to 2 seconds
         if port.main_engine:
             original_write_timeout = port.main_engine.write_timeout
-            port.main_engine.write_timeout = 2  # 2秒写超时
+            port.main_engine.write_timeout = 2  # 2s write timeout
         
         slice = 0
         while len(in_str) > slice:
@@ -137,7 +137,7 @@ def serialWriteNumToByte(port, token, var=None):  # Only to be used for c m u b 
             slice+=20
             time.sleep(delayBetweenSlice)
         
-        # 恢复原始写超时设置
+        # Restore original write timeout
         if port.main_engine:
             port.main_engine.write_timeout = original_write_timeout
             
@@ -181,12 +181,12 @@ def serialWriteByte(port, var=None):
     logger.debug(f"!!!!!!! {in_str}")
     # printH("in_str:", in_str)
     
-    # 添加超时机制，防止在错误的串口上阻塞
+    # Time out writes so we do not block indefinitely on a wrong port
     try:
-        # 设置写超时为 2 秒
+        # Set write timeout to 2 seconds
         if port.main_engine:
             original_write_timeout = port.main_engine.write_timeout
-            port.main_engine.write_timeout = 2  # 2秒写超时
+            port.main_engine.write_timeout = 2  # 2s write timeout
             port.Send_data(encode(in_str))
             port.main_engine.write_timeout = original_write_timeout
         else:
@@ -309,7 +309,7 @@ def splitTaskForLargeAngles(task):
         indexedList = list()
         if token == 'L':
             # Determine grid size based on robot model
-            if hasattr(config, 'model_') and config.model_ and 'Chero' in config.model_:
+            if hasattr(config, 'model_') and config.model_ and 'Chero' in config.model_ or 'Mini' in config.model_:
                 gridSize = 2  # 2x3 grid for Chero
                 maxJoints = 6
             else:
@@ -537,7 +537,8 @@ postureDict = {
     'Bittle': postureTableBittle,
     'BittleX+Arm': postureTableBittleR,
     'DoF16': postureTableDoF16,
-    'Chero': postureTableDoF6
+    'Chero': postureTableDoF6,
+    'Mini': postureTableDoF6
 }
 
 skillFullName = {
@@ -599,6 +600,9 @@ def schedulerToSkill(ports, testSchedule):
     if hasattr(config, 'model_') and config.model_:
         if 'Chero' in config.model_:
             currentPostureTable = postureDict['Chero']
+            numJoints = 6
+        elif 'Mini' in config.model_:
+            currentPostureTable = postureDict['Mini']
             numJoints = 6
         elif 'Nybble' in config.model_:
             currentPostureTable = postureDict['Nybble']
@@ -664,7 +668,7 @@ def getModelAndVersion(result):
     if result != -1:
         parse = result[1].replace('\r','').split('\n')
         for l in range(len(parse)):
-            if 'Nybble' in parse[l] or 'Bittle' in parse[l] or 'DoF16' in parse[l] or 'Chero' in parse[l]:
+            if 'Nybble' in parse[l] or 'Bittle' in parse[l] or 'DoF16' in parse[l] or 'Chero' in parse[l] or 'Mini' in parse[l]:
                 config.model_ = parse[l]
                 config.version_ = parse [l+1]
                 config.modelList += [config.model_]
@@ -681,6 +685,8 @@ def updatePostureTable():
     if hasattr(config, 'model_') and config.model_:
         if 'Chero' in config.model_:
             postureTable = postureDict['Chero']
+        elif 'Mini' in config.model_:
+            postureTable = postureDict['Mini']
         elif 'Nybble' in config.model_:
             postureTable = postureDict['Nybble']
         elif 'DoF16' in config.model_:
@@ -880,18 +886,18 @@ def showSerialPorts(allPorts):
 
 # get the path of configuration file
 def getConfigFilePath(configDir, separation):
-    """获取配置文件的完整路径"""
+    """Return full path to the configuration file."""
     return configDir + separation + 'defaultConfig.txt'
 
 
 # read all ports from configuration file line 9
 def readAllPortsFromConfig():
     """
-    从配置文件第9行读取上次运行时的系统串口列表
-    格式: All ports: COM3, COM5
-    返回: 串口名称列表（不含 /dev/ 前缀）
+    Read system serial port list from config file line 9 (previous run).
+    Format: All ports: COM3, COM5
+    Returns: list of port names (no /dev/ prefix).
     """
-    configPath = defaultConfPath    # 在commonVar.py中定义
+    configPath = defaultConfPath    # defined in commonVar.py
     if not os.path.exists(configPath):
         return []
     
@@ -901,7 +907,7 @@ def readAllPortsFromConfig():
             if len(lines) >= 9:
                 line9 = lines[8].strip()
                 if line9.startswith('All ports: '):
-                    # 去掉前缀 "All ports: "
+                    # Strip "All ports: " prefix
                     portsStr = line9[len('All ports: '):]
                     if portsStr:
                         ports = [p.strip() for p in portsStr.split(',') if p.strip()]
@@ -915,11 +921,11 @@ def readAllPortsFromConfig():
 # read valid ports from configuration file line 10
 def readValidPortsFromConfig():
     """
-    从配置文件第10行读取上次运行时可以打开的串口列表
-    格式: Valid ports: COM3, COM5
-    返回: 串口名称列表（不含 /dev/ 前缀）
+    Read successfully opened serial port list from config file line 10 (previous run).
+    Format: Valid ports: COM3, COM5
+    Returns: list of port names (no /dev/ prefix).
     """
-    configPath = defaultConfPath    # 在commonVar.py中定义
+    configPath = defaultConfPath    # defined in commonVar.py
     if not os.path.exists(configPath):
         return []
     
@@ -929,7 +935,7 @@ def readValidPortsFromConfig():
             if len(lines) >= 10:
                 line10 = lines[9].strip()
                 if line10.startswith('Valid ports: '):
-                    # 去掉前缀 "Valid ports: "
+                    # Strip "Valid ports: " prefix
                     portsStr = line10[len('Valid ports: '):]
                     if portsStr:
                         ports = [p.strip() for p in portsStr.split(',') if p.strip()]
@@ -943,20 +949,19 @@ def readValidPortsFromConfig():
 # save all ports and valid ports to configuration file
 def savePortsToConfig(allPortsList, validPortsList):
     """
-    将串口列表保存到配置文件第9行和第10行
-    参数: 
-        configDir - 配置目录路径，在commonVar.py中定义
-        separation - 路径分隔符，在commonVar.py中定义
-        allPortsList - 系统所有串口列表（不含 /dev/ 前缀）
-        validPortsList - 可以打开的串口列表（不含 /dev/ 前缀）
+    Save port lists to config file lines 9 and 10.
+    Uses configDir / defaultConfPath from commonVar.
+    Args:
+        allPortsList - all system serial ports (no /dev/ prefix)
+        validPortsList - ports that opened successfully (no /dev/ prefix)
     """
-    # 确保配置目录存在
+    # Ensure config directory exists
     if not os.path.exists(configDir):
         os.makedirs(configDir)
 
-    configPath = defaultConfPath    # 在commonVar.py中定义
+    configPath = defaultConfPath    # defined in commonVar.py
     
-    # 读取现有内容
+    # Read existing content
     lines = []
     if os.path.exists(configPath):
         try:
@@ -965,24 +970,24 @@ def savePortsToConfig(allPortsList, validPortsList):
         except Exception as e:
             print(f'* Error reading config file: {e}')
     
-    # 确保现有的每一行都以换行符结尾（修复文件格式问题）
+    # Ensure every line ends with a newline (fixes inconsistent file formatting)
     for i in range(len(lines)):
         if not lines[i].endswith('\n'):
             lines[i] += '\n'
     
-    # 确保至少有10行
+    # Ensure at least 10 lines
     while len(lines) < 10:
         lines.append('\n')
     
-    # 更新第9行（索引为8）- 保存系统所有串口
+    # Update line 9 (index 8) — all system serial ports
     allPortsStr = 'All ports: ' + ', '.join(allPortsList)
     lines[8] = allPortsStr + '\n'
     
-    # 更新第10行（索引为9）- 保存可以打开的串口
+    # Update line 10 (index 9) — successfully opened ports
     validPortsStr = 'Valid ports: ' + ', '.join(validPortsList)
     lines[9] = validPortsStr + '\n'
     
-    # 写回文件
+    # Write back to file
     try:
         with open(configPath, 'w', encoding='utf-8') as f:
             f.writelines(lines)
@@ -995,31 +1000,31 @@ def savePortsToConfig(allPortsList, validPortsList):
 # smart connect serial ports with smart configuration
 def smartConnectPorts():
     """
-    智能自动连接串口，支持配置文件持久化
-    按照优化的逻辑：只检查有效串口和新增串口，避免重复检查已知无效的串口
-    
-    参数:
-        configDir - 配置目录路径
-        separation - 路径分隔符
-    
-    返回:
-        newValidPorts - 成功连接的串口名称列表
+    Smart auto-connect serial ports with persistent configuration.
+    Optimized strategy: only probes valid ports and newly added ports, avoiding repeat checks on known-bad ports.
+
+    Parameters (conceptual; paths come from commonVar):
+        configDir - configuration directory path
+        separation - path separator
+
+    Returns:
+        newValidPorts - list of successfully connected port names
     """
-    # 创建空列表
+    # Initialize lists
     CheckList = []
     newValidPorts = []
     
-    # 获取当前系统中检测到的串口组成的列表
+    # Build list of serial ports currently seen by the OS
     allPortsRaw = Communication.Print_Used_Com()
     allPorts = showSerialPorts(allPortsRaw)
 
-    # 检查系统是否有串口设备
+    # Abort if the system reports no serial devices
     if len(allPorts) == 0:
         if not config.SHOW_GUI:
             print('No port found! Please make sure the serial port can be recognized by the computer first.')
             sys.exit(1)
     
-    # 提取串口名称列表（不含 /dev/ 前缀）
+    # Port name list without /dev/ prefix
     allPortNames = [port.split('/')[-1] for port in allPorts]
     
     # Remove duplicate ports from the same device (prefer wchusbserial over usbmodem)
@@ -1027,40 +1032,40 @@ def smartConnectPorts():
     allPortsFiltered = deleteDuplicatedUsbSerial(allPorts.copy())
     allPortNames = [port.split('/')[-1] for port in allPortsFiltered]
     
-    # 读取配置文件
-    # 第9行：上次运行时的系统串口列表
+    # Read persisted config
+    # Line 9: system serial list from last run
     previousPorts = readAllPortsFromConfig()
     logger.debug(f'Previous ports from config: {previousPorts}')
     
-    # 第10行：上次运行时可以打开的串口列表
+    # Line 10: ports that opened successfully last run
     validPorts = readValidPortsFromConfig()
     logger.debug(f'Valid ports from config: {validPorts}')
     
-    # 计算差异：在 allPortNames 中但不在 previousPorts 中的元素（新增的串口）
+    # Ports present now but not in previousPorts (newly appeared)
     diffPorts = [port for port in allPortNames if port not in previousPorts]
     logger.debug(f'Diff ports (new ports): {diffPorts}')
     
-    # 删除 validPorts 中不在当前系统串口列表 allPortNames 中的元素
+    # Drop validPorts entries no longer present on the system
     validPorts = [port for port in validPorts if port in allPortNames]
     logger.debug(f'Valid ports after filtering: {validPorts}')
     
-    # 确定检查列表 CheckList
+    # Build CheckList of ports to probe
     if len(validPorts) == 0:
-        # 如果没有有效串口，检查所有系统串口
+        # No known-good ports: try every port the OS reports
         CheckList = allPortNames
         print('No valid ports found in config. Trying all available ports...')
     else:
-        # 有有效串口，只检查有效串口和新增串口
+        # Probe last-known-good ports plus any new ones
         CheckList = validPorts + diffPorts
         print(f'Trying to connect to valid ports and new ports...')
     
     logger.debug(f'CheckList: {CheckList}')
     
-    # 使用多线程方式对 CheckList 中每一个串口设备尝试打开
+    # Try opening each port in CheckList on a worker thread
     threads = list()
     
     for portName in CheckList:
-        # 构造完整的串口路径
+        # Build full device path
         if platform.system() == "Windows":
             fullPort = portName
         else:
@@ -1069,7 +1074,7 @@ def smartConnectPorts():
         try:
             print(f'Trying port: {portName}...')
             serialObject = Communication(fullPort, 115200, 1)
-            # 创建线程来测试串口
+            # Spawn thread to probe this port
             t = threading.Thread(target=testPort, args=(goodPorts, serialObject, portName))
             threads.append(t)
             t.daemon = True
@@ -1078,18 +1083,18 @@ def smartConnectPorts():
             print(f'* Port {portName} cannot be opened!')
             logger.debug(f'Error opening port {portName}: {e}')
     
-    # 等待所有线程完成（最多等待 8 秒）
+    # Wait for probe threads (up to 8s each if still alive)
     for t in threads:
         if t.is_alive():
             t.join(timeout=8)
     
-    # 从 goodPorts 中提取成功连接的串口名称
+    # Collect names of ports that connected successfully
     for serialObj, portName in goodPorts.items():
         if portName in CheckList:
             newValidPorts.append(portName)
             print(f'Successfully connected to port: {portName}')
     
-    # 检查是否有成功打开的串口
+    # If nothing connected, optionally enter replug flow (GUI mode)
     if len(newValidPorts) == 0:
         print('No port found! Please make sure the serial port can be recognized by the computer first.')
         if not config.SHOW_GUI:
@@ -1098,16 +1103,16 @@ def smartConnectPorts():
             print('Replug mode')
             replug(goodPorts)
             if goodPorts:
-                # 从 goodPorts 中提取成功连接的串口名称
+                # Collect names after replug retry
                 for serialObj, portName in goodPorts.items():
                     if portName in CheckList:
                         newValidPorts.append(portName)
                         allPortNames.append(portName)
                         print(f'Successfully connected to port: {portName}')
     
-    # 更新配置文件
-    # 第9行：保存此次运行程序时的系统串口列表
-    # 第10行：保存此次运行程序得到的可以打开的串口列表
+    # Persist to config
+    # Line 9: system serial list for this run
+    # Line 10: ports that opened successfully this run
     savePortsToConfig(allPortNames, newValidPorts)
     
     return newValidPorts

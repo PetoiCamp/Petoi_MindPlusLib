@@ -157,17 +157,17 @@ def getPortList():
 # deactivate the gyro
 def deacGyro():
     """
-    关闭陀螺仪 - 支持多个不同型号的设备
-    遍历所有连接的串口，根据每个设备的 boardVer 发送相应的陀螺仪关闭命令
+    Deactivate the gyroscope — supports multiple board variants.
+    Iterates all connected serial ports and sends the appropriate gyro-off command per device boardVer.
     """
-    # 遍历所有连接的串口
+    # Iterate all connected serial ports
     for serialObj, portName in goodPorts.items():
         try:
-            # 向该串口查询设备信息
+            # Query device info on this port
             result = sendTask(goodPorts, serialObj, ['?', 0], 2)
             
             if result != -1:
-                # 解析设备型号和版本
+                # Parse model name and firmware/board version line
                 parse = result[1].replace('\r','').split('\n')
                 boardVer = None
                 # modelName = None
@@ -181,16 +181,16 @@ def deacGyro():
                         break
                 
                 if boardVer is not None:
-                    # 根据 boardVer 发送相应的陀螺仪关闭命令
+                    # Send the appropriate gyro-off command for this boardVer
                     if boardVer[0] == 'N':
-                        # NyBoard: 发送 'G' 命令
+                        # NyBoard: send 'G' command
                         res = sendTask(goodPorts, serialObj, ['G', 0])
                         logger.debug(f'Port {portName}: gyro status = {res}')
                         if res != -1 and res[0][0] == 'G':
                             res = sendTask(goodPorts, serialObj, ['G', 0])
                             logger.debug(f'Port {portName}: gyro status = {res}')
                     else:
-                        # BiBoard: 发送 'gb' 命令
+                        # BiBoard: send 'gb' command
                         res = sendTask(goodPorts, serialObj, ['gb', 0])
                         if res != -1 and res[0][0] == 'g':
                             logger.debug(f'Port {portName}: gyro is deactivated successfully.')
@@ -368,17 +368,17 @@ def openPort(port):
 # auto connect serial ports with smart configuration
 def autoConnect():
     """
-    智能自动连接串口，支持配置文件持久化
-    按照优化的逻辑：只检查有效串口和新增串口，避免重复检查已知无效的串口
+    Smart auto-connect serial ports with persistent configuration.
+    Optimized strategy: only probes valid ports and newly added ports, avoiding repeat checks on known-bad ports.
     """
-    # 调用 ardSerial.py 中的 smartConnectPorts 函数
+    # Delegate to smartConnectPorts() in ardSerial.py
     smartConnectPorts()
     
-    # 打印可用技能名称
+    # Print available skill names
     logger.debug(f'goodPorts: {goodPorts}')
     printSkillFileName()
     
-    # 关闭陀螺仪
+    # Deactivate gyroscope
     deacGyro()
     
 
